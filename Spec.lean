@@ -55,120 +55,7 @@ theorem Spec.parse_wf (cs : List Char) (d : Document)
 theorem Spec.print_parse (cs : List Char) (d : Document)
     (h : parse cs = some d) : parse (print d) = some d := sorry
 
-/-! ## Refused inputs
-
-Single inputs the parser refuses, one for each headline rule of
-`SPEC.md`. Each input is one of the named rejection cases in the
-test harness. The differential tests cover these rules on many
-more inputs; these statements pin them so a reader of the
-specification can check each rule against one concrete case. -/
-
-/-- A document carrying a document type declaration is refused,
-    not read leniently. -/
-theorem Spec.rejects_doctype :
-    (parse "<!DOCTYPE a><a/>".toList).isSome = false := sorry
-
-/-- A reference to an entity the subset does not define is
-    refused: no entity is ever expanded, because none exist. -/
-theorem Spec.rejects_undefined_entity :
-    (parse "<a>&nbsp;</a>".toList).isSome = false := sorry
-
-/-- An end tag that does not match the start tag is refused. -/
-theorem Spec.rejects_mismatched_tags :
-    (parse "<a></b>".toList).isSome = false := sorry
-
-/-- An element with no end tag is refused. -/
-theorem Spec.rejects_unclosed_element :
-    (parse "<a>".toList).isSome = false := sorry
-
-/-- A document has one root element; a second one is refused. -/
-theorem Spec.rejects_second_root :
-    (parse "<a/><b/>".toList).isSome = false := sorry
-
-/-- Character data before the root element is refused. -/
-theorem Spec.rejects_text_before_root :
-    (parse "x<a/>".toList).isSome = false := sorry
-
-/-- An attribute name standing twice on one element is refused. -/
-theorem Spec.rejects_duplicate_attribute :
-    (parse "<a b=\"1\" b=\"2\"/>".toList).isSome = false := sorry
-
-/-- A raw less sign inside an attribute value is refused. -/
-theorem Spec.rejects_lt_in_attribute :
-    (parse "<a b=\"x<y\"/>".toList).isSome = false := sorry
-
-/-- The run `]]>` inside text is refused, as XML requires
-    outside a CDATA section. -/
-theorem Spec.rejects_cdata_close_in_text :
-    (parse "<a>x]]>y</a>".toList).isSome = false := sorry
-
-/-- Two dashes in a row inside a comment body are refused. -/
-theorem Spec.rejects_dashdash_in_comment :
-    (parse "<a><!-- x -- y --></a>".toList).isSome = false := sorry
-
-/-- A character reference naming a surrogate value is refused:
-    a surrogate is not a legal XML character. -/
-theorem Spec.rejects_surrogate_ref :
-    (parse "<a>&#xD800;</a>".toList).isSome = false := sorry
-
-/-- A character reference naming zero is refused: zero is not a
-    legal XML character. -/
-theorem Spec.rejects_zero_ref :
-    (parse "<a>&#0;</a>".toList).isSome = false := sorry
-
-/-- A colon in a name is refused: in XML a colon signals
-    namespace use, and namespaces are out of this subset. -/
-theorem Spec.rejects_colon_in_name :
-    (parse "<a:b/>".toList).isSome = false := sorry
-
-/-- A name starting with a digit is refused. -/
-theorem Spec.rejects_digit_name :
-    (parse "<1a/>".toList).isSome = false := sorry
-
-/-- An attribute value with no quotes is refused. -/
-theorem Spec.rejects_unquoted_attribute :
-    (parse "<a b=x/>".toList).isSome = false := sorry
-
-/-- A CDATA section in the prolog is refused: CDATA stands in
-    element content only. -/
-theorem Spec.rejects_cdata_in_prolog :
-    (parse "<![CDATA[x]]><a/>".toList).isSome = false := sorry
-
-/-- The XML declaration form is refused: the declaration is not
-    part of this subset, and a target of `xml` rejects
-    everywhere. -/
-theorem Spec.rejects_xml_declaration :
-    (parse "<?xml version=\"1.0\"?><a/>".toList).isSome = false := sorry
-
-/-- An attribute named `xmlns`, the default namespace declaration,
-    is refused: namespaces are out of this subset, and the colon
-    ban on names does not reach this name. Stated for the root
-    element of a text that starts with any well formed prolog,
-    printed, then the root's start tag with any well formed
-    attributes, printed, before it, and anything after the name
-    that does not make the name longer. -/
-theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
-    (attrs : List (List Char × List Char)) (rest : List Char)
-    (hpro : MiscOk prolog) (hname : ValidName name)
-    (hattrs : AttrsOk attrs)
-    (hrest : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
-    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
-      ' ' :: xmlnsName ++ rest) = none := sorry
-
-/-- An attribute must have whitespace before it, as XML 1.0
-    productions [40] and [44] require: a name that starts right
-    after the closing quote of the attribute before it is refused.
-    Stated for the root element of a text that starts with any well
-    formed prolog, printed, then the root's start tag with at least
-    one well formed attribute, printed, then a name start
-    character, then anything. -/
-theorem Spec.rejects_attribute_without_space (prolog : List Node)
-    (name : List Char) (attrs : List (List Char × List Char))
-    (c : Char) (rest : List Char)
-    (hpro : MiscOk prolog) (hname : ValidName name)
-    (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
-    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
-      c :: rest) = none := sorry
+/-! ## Line ends -/
 
 /-- Line ends are normalized as XML 1.0 section 2.11 requires: a
     carriage return followed by a line feed reads exactly as one
@@ -186,3 +73,222 @@ theorem Spec.crlf_reads_as_lf (pre post : List Char)
 theorem Spec.cr_reads_as_lf (pre post : List Char)
     (hpre : pre.getLast? ≠ some '\r') (hpost : post.head? ≠ some '\n') :
     parse (pre ++ '\r' :: post) = parse (pre ++ '\n' :: post) := sorry
+
+/-! ## Refused texts
+
+Each statement below is about a family of texts, not one input. The
+families share a shape: a text that starts with a well formed
+prolog (`MiscOk`), printed in canonical form, then, for most of
+them, the root's start tag with a valid name and well formed
+attributes (`AttrsOk`), also printed, then the form the rule turns
+away, then anything at all. Each docstring says which part is
+fixed. None says that the form is refused in every position: a
+statement about the root's first text run says nothing about a
+nested element. `SPEC.md` and `README.md` list what is left
+out. -/
+
+/-- A document type declaration right after the prolog is refused,
+    whatever follows `<!DOCTYPE`. -/
+theorem Spec.rejects_doctype (prolog : List Node) (rest : List Char)
+    (hpro : MiscOk prolog) :
+    parse (printNodes prolog ++ ['<', '!', 'D', 'O', 'C', 'T', 'Y', 'P', 'E'] ++
+      rest) = none := sorry
+
+/-- A CDATA section right after the prolog is refused, whatever
+    follows `<![CDATA[`: CDATA stands in element content only. -/
+theorem Spec.rejects_cdata_in_prolog (prolog : List Node) (rest : List Char)
+    (hpro : MiscOk prolog) :
+    parse (printNodes prolog ++ ['<', '!', '[', 'C', 'D', 'A', 'T', 'A', '['] ++
+      rest) = none := sorry
+
+/-- The XML declaration is refused: a text that starts with `<?` and
+    a processing instruction target that is the word `xml` in any
+    letter case, whatever follows the target that does not make it
+    longer. -/
+theorem Spec.rejects_xml_declaration (t rest : List Char) (ht : ValidName t)
+    (hx : IsXmlTarget t) (hr : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
+    parse ('<' :: '?' :: t ++ rest) = none := sorry
+
+/-- Character data before the root is refused: right after the
+    prolog, any character that is neither whitespace nor a less
+    sign, whatever follows. -/
+theorem Spec.rejects_text_before_root (prolog : List Node) (c : Char)
+    (rest : List Char) (hpro : MiscOk prolog) (hws : ¬ IsWs c)
+    (hlt : c ≠ '<') : parse (printNodes prolog ++ c :: rest) = none := sorry
+
+/-- A second root is refused: any well formed document, printed,
+    followed by a less sign and a name start character, then
+    anything. -/
+theorem Spec.rejects_second_root (d : Document) (c : Char) (rest : List Char)
+    (hwf : WF d) (hc : IsNameStart c) :
+    parse (print d ++ '<' :: c :: rest) = none := sorry
+
+/-- An element name that starts with a digit is refused: right
+    after the prolog, a less sign and any of the ten digits,
+    whatever follows. -/
+theorem Spec.rejects_digit_name (prolog : List Node) (d : Char)
+    (rest : List Char) (hpro : MiscOk prolog)
+    (hd : d ∈ ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) :
+    parse (printNodes prolog ++ '<' :: d :: rest) = none := sorry
+
+/-- A colon in an element name is refused: right after the prolog,
+    a less sign, any valid name, then a colon, whatever follows. In
+    XML a colon signals namespace use, and namespaces are out. -/
+theorem Spec.rejects_colon_in_name (prolog : List Node) (name rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) :
+    parse (printNodes prolog ++ '<' :: name ++ ':' :: rest) = none := sorry
+
+/-- An end tag that names a different element is refused: right
+    after the prolog, any well formed root element printed in full,
+    except that its end tag names another valid name, then
+    anything. -/
+theorem Spec.rejects_mismatched_tags (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (content : List Node)
+    (other rest : List Char)
+    (hpro : MiscOk prolog) (hel : WFNode (.elem name attrs content))
+    (hother : ValidName other) (hne : other ≠ name) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' ::
+      printNodes content ++ '<' :: '/' :: other ++ '>' :: rest) = none := sorry
+
+/-- An element with no end tag is refused: right after the prolog,
+    the root's start tag with any valid name and well formed
+    attributes, printed, at the very end of the text. -/
+theorem Spec.rejects_unclosed_element (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char))
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ ['>']) =
+      none := sorry
+
+/-- A reference to an entity other than the five predefined ones is
+    refused, in the root's first run of character data: after the
+    prolog and the root's start tag, any text with no less sign and
+    no ampersand, then `&`, any valid name other than `lt`, `gt`,
+    `amp`, `apos` and `quot`, and `;`, whatever follows. No such
+    entity is expanded there. -/
+theorem Spec.rejects_undefined_entity (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (pre e post : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hlt : '<' ∉ pre) (hamp : '&' ∉ pre) (he : ValidName e)
+    (hfive : e ∉ [['l', 't'], ['g', 't'], ['a', 'm', 'p'], ['a', 'p', 'o', 's'],
+      ['q', 'u', 'o', 't']]) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' :: pre ++
+      '&' :: e ++ ';' :: post) = none := sorry
+
+/-- The same in an attribute value: after the prolog and the root's
+    start tag with its well formed attributes, a space, any valid
+    attribute name, `="`, any text with no double quote and no
+    ampersand, then `&`, a valid name other than the five, and `;`,
+    whatever follows. -/
+theorem Spec.rejects_undefined_entity_in_attribute (prolog : List Node)
+    (name : List Char) (attrs : List (List Char × List Char))
+    (a pre e post : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (ha : ValidName a) (hq : '"' ∉ pre) (hamp : '&' ∉ pre) (he : ValidName e)
+    (hfive : e ∉ [['l', 't'], ['g', 't'], ['a', 'm', 'p'], ['a', 'p', 'o', 's'],
+      ['q', 'u', 'o', 't']]) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ ' ' :: a ++
+      '=' :: '"' :: pre ++ '&' :: e ++ ';' :: post) = none := sorry
+
+/-- The character reference `&#xD800;`, a surrogate, is refused in
+    the root's first run of character data: after the prolog and
+    the root's start tag, any text with no less sign and no
+    ampersand, then `&#xD800;`, whatever follows. -/
+theorem Spec.rejects_surrogate_ref (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (pre post : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hlt : '<' ∉ pre) (hamp : '&' ∉ pre) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' :: pre ++
+      ['&', '#', 'x', 'D', '8', '0', '0', ';'] ++ post) = none := sorry
+
+/-- The character reference `&#0;` is refused in the same place. -/
+theorem Spec.rejects_zero_ref (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (pre post : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hlt : '<' ∉ pre) (hamp : '&' ∉ pre) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' :: pre ++
+      ['&', '#', '0', ';'] ++ post) = none := sorry
+
+/-- The run `]]>` is refused in the root's first run of character
+    data: after the prolog and the root's start tag, any text with
+    no less sign and no ampersand, then `]]>`, whatever follows. -/
+theorem Spec.rejects_cdata_close_in_text (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (pre post : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hlt : '<' ∉ pre) (hamp : '&' ∉ pre) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' :: pre ++
+      [']', ']', '>'] ++ post) = none := sorry
+
+/-- Two dashes inside a comment are refused, for a comment that is
+    the root's first content: after the prolog and the root's start
+    tag, `<!--`, a body a well formed comment may hold, `--`, then
+    any character but `>`, whatever follows. -/
+theorem Spec.rejects_dashdash_in_comment (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (body : List Char) (c : Char)
+    (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hbody : WFNode (.comment body)) (hc : c ≠ '>') :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ '>' ::
+      '<' :: '!' :: '-' :: '-' :: body ++ '-' :: '-' :: c :: rest) = none := sorry
+
+/-- A repeated attribute name is refused on the root: after the
+    prolog and the root's start tag with its well formed attributes,
+    one more attribute, printed, whose name is already among them,
+    with any value, whatever follows. -/
+theorem Spec.rejects_duplicate_attribute (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (a v rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (hdup : ∃ w, (a, w) ∈ attrs) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      printAttrs [(a, v)] ++ rest) = none := sorry
+
+/-- A raw less sign in an attribute value is refused on the root:
+    after the prolog and the root's start tag with its well formed
+    attributes, a space, any valid attribute name, `="`, any text
+    with no double quote and no ampersand, then `<`, whatever
+    follows. -/
+theorem Spec.rejects_lt_in_attribute (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (a pre rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (ha : ValidName a) (hq : '"' ∉ pre) (hamp : '&' ∉ pre) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ ' ' :: a ++
+      '=' :: '"' :: pre ++ '<' :: rest) = none := sorry
+
+/-- An attribute value with no quotes is refused on the root: after
+    the prolog and the root's start tag with its well formed
+    attributes, a space, any valid attribute name, `=`, then any
+    character that is no quote and no whitespace, whatever
+    follows. -/
+theorem Spec.rejects_unquoted_attribute (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (a : List Char) (c : Char)
+    (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name) (hattrs : AttrsOk attrs)
+    (ha : ValidName a) (hc1 : c ≠ '"') (hc2 : c ≠ '\'') (hcw : ¬ IsWs c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++ ' ' :: a ++
+      '=' :: c :: rest) = none := sorry
+
+/-- An attribute must have whitespace before it, as XML 1.0
+    productions [40] and [44] require: on the root, after the prolog
+    and at least one well formed attribute, printed, a name start
+    character right after the closing quote is refused, whatever
+    follows. -/
+theorem Spec.rejects_attribute_without_space (prolog : List Node)
+    (name : List Char) (attrs : List (List Char × List Char))
+    (c : Char) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      c :: rest) = none := sorry
+
+/-- An attribute named `xmlns`, the default namespace declaration,
+    is refused on the root: namespaces are out of this subset, and
+    the colon ban on names does not reach this name. After the
+    prolog and the root's start tag with any well formed attributes,
+    printed, a space and `xmlns`, whatever follows the name that
+    does not make it longer. -/
+theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs)
+    (hrest : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      ' ' :: xmlnsName ++ rest) = none := sorry

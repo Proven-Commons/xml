@@ -771,13 +771,13 @@ theorem parsePI_space {cs t X : List Char}
   split
   · rename_i target r1 e
     cases e
-    rw [if_neg hres]
+    rw [ite_eq_right hres]
     split
     · rename_i r2 e
       exact absurd (List.cons.inj e).1 (by decide)
     · rename_i c tl e
       cases e
-      rw [if_pos (show isWs ' ' = true by decide)]
+      rw [ite_eq_left (show isWs ' ' = true by decide)]
       cases parsePIData (skipWs (' ' :: X)) with
       | none => rfl
       | some p => rfl
