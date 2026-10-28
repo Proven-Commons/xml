@@ -220,8 +220,10 @@ Two deliberate choices, also stated in `SPEC.md`:
    accepted by Lean's kernel and every other kernel
    shipped with Lean.
 2. `python3 tests/run_tests.py`: the fixed cases, the
-   named rejections, and the differential run against
-   Python's `xml.etree.ElementTree`, with counts and any
-   failures written to `tests/TEST-RESULTS.md`.
+   differential run against Python's
+   `xml.etree.ElementTree`, every canonical print sent
+   back to the tool, the named rejections, and the
+   malformed requests, with counts and any failures
+   written to `tests/TEST-RESULTS.md`.
 3. `lake build`: the library, the proofs, and the tool
-   build clean.
+   build with no errors.

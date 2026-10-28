@@ -43,12 +43,15 @@ Four parts.
    1 and 2 is sent back, and the answer must be the same print
    (`Spec.print_parse`, run on the compiled tool).
 
-4. Named rejections: one input per rejection rule in SPEC.md.
-   The Lean tool must reject every one. ElementTree agrees with
-   most of them; where ElementTree accepts (a document type
-   declaration, a colon in a name, the XML declaration form),
-   that is an out of subset disagreement, counted apart, because
-   the subset is narrower than XML by design.
+4. Named rejections: inputs for every rejection rule in SPEC.md,
+   most of them in more than one position (at the start, after
+   a prolog, after text, after other attributes, in a nested
+   element). The Lean tool must reject every one. ElementTree
+   agrees with most of them; where ElementTree accepts (a
+   document type declaration, a colon in a name, a namespace
+   declaration, the XML declaration form), that is an out of
+   subset disagreement, counted apart, because the subset is
+   narrower than XML by design.
 
 Malformed request lines must be answered `error`, as in the
 other slices' harnesses.

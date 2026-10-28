@@ -31,13 +31,17 @@
     namespace, and namespaces are out of this subset. Prefixed
     declarations (`xmlns:p`) are already rejected by the colon
     ban on names.
+  - Each attribute needs whitespace before it, as XML 1.0
+    productions [40] and [44] require.
 
   The functions that can nest or loop (`parseElement`,
   `parseNodes`, `parseAttrs`, `parseCharData`, `parseMisc`,
-  `parseTextRun`, `parseAttrValue`) take a fuel count. Each step spends one unit, so the functions are
-  total on hostile input. The top level `parse` passes one more
-  than the length of the text, which is always enough for a text
-  the grammar accepts.
+  `parseTextRun`, `parseAttrValue`) take a fuel count. Each step
+  spends one unit, so the functions are total on hostile input.
+  The top level `parse` passes one more than the length of the
+  normalized text. The round trip proof shows that is enough for
+  every canonical print; that it is enough for every text the
+  grammar accepts is not proved.
 -/
 
 import Xml.Value

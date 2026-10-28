@@ -2,10 +2,9 @@
   The round trip proof: for every well formed document, parsing
   its printed form gives the document back.
 
-  The statement proved here is `parse_print`. A matching statement
-  in a spec file still has to be added by a reviewer, so this file
-  builds on its own, in the same shape as the proofs of the other
-  slices.
+  The statement proved here is `parse_print`; `Spec.parse_print`
+  in `Spec.lean` states it, and `Proofs/SpecProofs.lean` proves
+  that statement with this theorem.
 
   The proof goes layer by layer: references, text runs, attribute
   values, character data, names, comment bodies, processing
