@@ -306,12 +306,12 @@ theorem escapeTextChar_cases (c : Char) :
   by_cases h1 : c = '&'
   · exact Or.inl ⟨h1, by simp [escapeTextChar, h1]⟩
   · by_cases h2 : c = '<'
-    · exact Or.inr (Or.inl ⟨h2, by simp [escapeTextChar, h1, h2]⟩)
+    · exact Or.inr (Or.inl ⟨h2, by simp [escapeTextChar, h2]⟩)
     · by_cases h3 : c = '>'
-      · exact Or.inr (Or.inr (Or.inl ⟨h3, by simp [escapeTextChar, h1, h2, h3]⟩))
+      · exact Or.inr (Or.inr (Or.inl ⟨h3, by simp [escapeTextChar, h3]⟩))
       · by_cases h4 : c = '\r'
         · exact Or.inr (Or.inr (Or.inr
-            (Or.inl ⟨h4, by simp [escapeTextChar, h1, h2, h3, h4]⟩)))
+            (Or.inl ⟨h4, by simp [escapeTextChar, h4]⟩)))
         · exact Or.inr (Or.inr (Or.inr (Or.inr
             ⟨h1, h2, h3, h4, by simp [escapeTextChar, h1, h2, h3, h4]⟩)))
 
@@ -329,18 +329,18 @@ theorem escapeAttrChar_cases (c : Char) :
   by_cases h1 : c = '&'
   · exact Or.inl ⟨h1, by simp [escapeAttrChar, h1]⟩
   · by_cases h2 : c = '<'
-    · exact Or.inr (Or.inl ⟨h2, by simp [escapeAttrChar, h1, h2]⟩)
+    · exact Or.inr (Or.inl ⟨h2, by simp [escapeAttrChar, h2]⟩)
     · by_cases h3 : c = '"'
-      · exact Or.inr (Or.inr (Or.inl ⟨h3, by simp [escapeAttrChar, h1, h2, h3]⟩))
+      · exact Or.inr (Or.inr (Or.inl ⟨h3, by simp [escapeAttrChar, h3]⟩))
       · by_cases h4 : c = '\t'
         · exact Or.inr (Or.inr (Or.inr
-            (Or.inl ⟨h4, by simp [escapeAttrChar, h1, h2, h3, h4]⟩)))
+            (Or.inl ⟨h4, by simp [escapeAttrChar, h4]⟩)))
         · by_cases h5 : c = '\n'
           · exact Or.inr (Or.inr (Or.inr (Or.inr
-              (Or.inl ⟨h5, by simp [escapeAttrChar, h1, h2, h3, h4, h5]⟩))))
+              (Or.inl ⟨h5, by simp [escapeAttrChar, h5]⟩))))
           · by_cases h6 : c = '\r'
             · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
-                (Or.inl ⟨h6, by simp [escapeAttrChar, h1, h2, h3, h4, h5, h6]⟩)))))
+                (Or.inl ⟨h6, by simp [escapeAttrChar, h6]⟩)))))
             · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
                 ⟨h1, h2, h3, h4, h5, h6,
                  by simp [escapeAttrChar, h1, h2, h3, h4, h5, h6]⟩)))))
@@ -380,7 +380,7 @@ theorem escapeText_not_bracketGt {cs : List Char} {rest : List Char}
             rw [hdd] at h2'
             simp at h2'
             exact h2'
-          simp [hdd, hx]
+          simp [hx]
       rw [hh] at h1
       simp at h1
     · rw [hd] at h2
@@ -405,7 +405,7 @@ theorem escapeText_not_bracketGt {cs : List Char} {rest : List Char}
           rw [e2]
           cases hdd : escapeTextChar e with
           | nil => exact absurd hdd (escapeTextChar_ne_nil e)
-          | cons x xs => simp [hdd]
+          | cons x xs => simp
         rw [hh] at h2
         exact hgt h2
 
@@ -455,19 +455,19 @@ theorem parseTextRun_escapeText : ∀ (cs : List Char) (rest : List Char),
         ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2, h3, h4, h5⟩
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseTextRun, ih', parseRef_amp]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseTextRun, ih', parseRef_lt]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseTextRun, ih', parseRef_gt]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseTextRun, ih', parseRef_dec13]
       · rw [h5]
         simp only [List.cons_append]
@@ -475,9 +475,9 @@ theorem parseTextRun_escapeText : ∀ (cs : List Char) (rest : List Char),
         · subst hc
           have hnb := escapeText_not_bracketGt (cs := cs) (rest := rest) hrest
           simp only [parseTextRun, List.nil_append]
-          rw [if_pos trivial, if_neg hnb, ih']
+          rw [ite_eq_left trivial, ite_eq_right hnb, ih']
           simp
-        · simp [parseTextRun, ih', h1, h2, h3, h4, hc,
+        · simp [parseTextRun, ih', h1, h2, hc,
             isLegalChar_of hclegal]
 
 /-- Reading back a printed attribute value gives the value back.
@@ -515,27 +515,27 @@ theorem parseAttrValue_escapeAttr : ∀ (cs : List Char) (rest : List Char),
         ⟨h1, h2, h3, h4, h5, h6, h7⟩
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_amp]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_lt]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_quot]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_dec9]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_dec10]
       · subst h1
         rw [h2]
-        simp only [List.cons_append, List.append_assoc]
+        simp only [List.cons_append]
         simp [parseAttrValue, ih', parseRef_dec13]
       · rw [h7]
         simp only [List.cons_append]
@@ -573,28 +573,28 @@ theorem parseCharData_escapeText (cs : List Char) (rest : List Char)
       ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2, h3, h4, h5⟩
     · subst h1
       rw [h2]
-      simp only [List.cons_append, List.append_assoc]
+      simp only [List.cons_append]
       have htr2 : parseTextRun f'
           ('&' :: 'a' :: 'm' :: 'p' :: ';' :: (escapeText cs' ++ rest)) =
           some ('&' :: cs', rest) := htr
       simp [parseCharData, htr2, hst]
     · subst h1
       rw [h2]
-      simp only [List.cons_append, List.append_assoc]
+      simp only [List.cons_append]
       have htr2 : parseTextRun f'
           ('&' :: 'l' :: 't' :: ';' :: (escapeText cs' ++ rest)) =
           some ('<' :: cs', rest) := htr
       simp [parseCharData, htr2, hst]
     · subst h1
       rw [h2]
-      simp only [List.cons_append, List.append_assoc]
+      simp only [List.cons_append]
       have htr2 : parseTextRun f'
           ('&' :: 'g' :: 't' :: ';' :: (escapeText cs' ++ rest)) =
           some ('>' :: cs', rest) := htr
       simp [parseCharData, htr2, hst]
     · subst h1
       rw [h2]
-      simp only [List.cons_append, List.append_assoc]
+      simp only [List.cons_append]
       have htr2 : parseTextRun f'
           ('&' :: '#' :: '1' :: '3' :: ';' :: (escapeText cs' ++ rest)) =
           some ('\r' :: cs', rest) := htr
@@ -684,13 +684,13 @@ theorem parseCommentBody_print : ∀ (cs : List Char) (rest : List Char),
           exact hdd [] ds (by simp)
         have e1 : ('-' :: d :: ds) ++ '-' :: '-' :: '>' :: rest =
             '-' :: d :: (ds ++ '-' :: '-' :: '>' :: rest) := by
-          simp [List.append_assoc]
+          simp
         rw [e1, parseCommentBody_dash_cons hd]
         have ih2 : parseCommentBody (d :: (ds ++ '-' :: '-' :: '>' :: rest)) =
             some (d :: ds, rest) := by
           have := ih'
           rwa [show (d :: ds) ++ '-' :: '-' :: '>' :: rest =
-            d :: (ds ++ '-' :: '-' :: '>' :: rest) by simp [List.append_assoc]] at this
+            d :: (ds ++ '-' :: '-' :: '>' :: rest) by simp] at this
         rw [ih2]
         rfl
     · have e1 : (c :: cs) ++ '-' :: '-' :: '>' :: rest =
@@ -737,7 +737,7 @@ theorem parsePIData_print : ∀ (d : List Char) (rest : List Char),
           exact hq [] es (by simp)
         have e1 : ('?' :: e :: es) ++ '?' :: '>' :: rest =
             '?' :: e :: (es ++ '?' :: '>' :: rest) := by
-          simp [List.append_assoc]
+          simp
         rw [e1, parsePIData_quest_cons he]
         have ih2 : parsePIData (e :: (es ++ '?' :: '>' :: rest)) =
             some (e :: es, rest) := ih'
@@ -804,7 +804,7 @@ theorem parsePI_print (t d : List Char) (rest : List Char)
       simp at hc
       rw [← hc]
       exact isNameChar_false_of not_nameChar_quest)
-    rw [if_pos rfl, List.append_assoc]
+    rw [ite_eq_left rfl, List.append_assoc]
     simp only [parsePI]
     rw [hpn]
     simp [hres']
@@ -830,7 +830,7 @@ theorem parsePI_print (t d : List Char) (rest : List Char)
       have hc0 : isWs c0 = false := isWs_false_of_not hstart'
       simp [skipWs, hw, hc0]
     have hpd := parsePIData_print (c0 :: d0) rest hq hlegal
-    rw [if_neg (by simp), List.append_assoc]
+    rw [ite_eq_right (by simp), List.append_assoc]
     have e1 : (' ' :: (c0 :: d0) ++ ['?', '>']) ++ rest =
         ' ' :: ((c0 :: d0) ++ '?' :: '>' :: rest) := by
       simp [List.append_assoc]
@@ -1027,8 +1027,8 @@ theorem parseAttrs_print : ∀ (attrs : List (List Char × List Char))
         have hsw : startsWithWs
             (printAttrs (((c0 :: ds), v) :: attrs) ++ tail) = true := by
           simp [printAttrs, startsWithWs, isWs]
-        simp [parseAttrs, hsk, hpn2, hval', hdup, hc0ne1, hc0ne2, hnx,
-          isNameStart_of hc0, hsw, List.cons_append, List.append_assoc,
+        simp [parseAttrs, hsk, hpn2, hval', hdup, hc0ne1, hnx,
+          isNameStart_of hc0, hsw, List.cons_append,
           skipWs_cons (by decide : isWs '=' = false),
           skipWs_cons (by decide : isWs '"' = false)]
       rwa [hstep]
@@ -1049,8 +1049,7 @@ theorem parseAttrs_print_closed
   cases f' with
   | zero => simp at hf'
   | succ f'' =>
-    simp [parseAttrs, skipWs, isWs_slash,
-      (by decide : isWs '>' = false)]
+    simp [parseAttrs, skipWs, isWs_slash]
 
 /-- Reading back a printed attribute list that ends a start tag. -/
 theorem parseAttrs_print_open
@@ -1435,7 +1434,7 @@ theorem elem_nodes : ∀ n, ElemProp n ∧ NodesProp n := by
                           simp [escapeText, h5]] at h
                         exact h
                       simp [parseNodes, printNodes, printNode, escapeText,
-                        h5, h1, h2, List.append_assoc]
+                        h5, h2, List.append_assoc]
                       rw [hcdX]
                       simp [hIH]
               | comment body =>
@@ -1458,7 +1457,7 @@ theorem elem_nodes : ∀ n, ElemProp n ∧ NodesProp n := by
                     parsePI_print t d _ hname hres hq hlegal hstart
                   have hpi2 := hpi
                   rw [List.append_assoc] at hpi2
-                  simp only [List.cons_append, List.nil_append] at hpi2
+                  simp only [List.cons_append] at hpi2
                   simp [parseNodes, printNodes, printNode]
                   rw [hpi2]
                   simp [hIH]
@@ -1484,7 +1483,7 @@ theorem elem_nodes : ∀ n, ElemProp n ∧ NodesProp n := by
                   simp only [printNode, printElem, hq0, List.append_assoc,
                     List.cons_append] at hE
                   simp [parseNodes, printNodes, printNode, printElem, hq0,
-                    hc0ne1, hc0ne2, hc0ne3, isNameStart_of hc0,
+                    hc0ne2, isNameStart_of hc0,
                     List.append_assoc]
                   rw [hE]
                   simp [hIH]
@@ -1546,7 +1545,7 @@ theorem parseMisc_print :
               simp [printNodes, List.length_append]
             omega
           have hih := ih rest hoktail hstop f' hlen
-          simp [parseMisc, printNodes, printNode, skipWs, hcb, hih,
+          simp [parseMisc, printNodes, printNode, hcb, hih,
             skipWs_cons (show isWs '<' = false by decide),
             List.append_assoc]
       · cases hwf with
@@ -1568,9 +1567,9 @@ theorem parseMisc_print :
             omega
           have hpi2 := hpi
           rw [List.append_assoc] at hpi2
-          simp only [List.cons_append, List.nil_append] at hpi2
+          simp only [List.cons_append] at hpi2
           have hih := ih rest hoktail hstop f' hlen
-          simp [parseMisc, printNodes, printNode, skipWs, hpi2, hih,
+          simp [parseMisc, printNodes, printNode, hpi2, hih,
             skipWs_cons (show isWs '<' = false by decide),
             List.append_assoc]
 
@@ -1765,8 +1764,7 @@ theorem parse_print (d : Document) (hwf : WF d) :
       (printNode d.root ++ printNodes d.epilog)).length + 1)
         (printNodes d.prolog ++
           (printNode d.root ++ printNodes d.epilog)) = some d := by
-      simp only [parseDocument, hpro', hsw, hroot', hepi', skipWs,
-        List.nil_append]
+      simp only [parseDocument, hpro', hsw, hroot', hepi', skipWs]
       rfl
     have hparse : parse (print d) = parseDocument ((printNodes d.prolog ++
       (printNode d.root ++ printNodes d.epilog)).length + 1) (print d) := by
