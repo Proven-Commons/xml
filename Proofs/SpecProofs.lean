@@ -11,12 +11,23 @@ import Xml
 import Proofs.RoundTrip
 import Proofs.Refusals
 import Proofs.LineEnds
+import Proofs.ParseWF
 
 open Xml
 
 theorem Spec.parse_print (d : Document) (hwf : WF d) :
     parse (print d) = some d :=
   Xml.Proofs.parse_print d hwf
+
+
+theorem Spec.parse_wf (cs : List Char) (d : Document)
+    (h : parse cs = some d) : WF d :=
+  Xml.Proofs.parse_wf cs d h
+
+
+theorem Spec.print_parse (cs : List Char) (d : Document)
+    (h : parse cs = some d) : parse (print d) = some d :=
+  Xml.Proofs.print_parse cs d h
 
 
 theorem Spec.rejects_doctype :

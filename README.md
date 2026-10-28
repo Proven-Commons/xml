@@ -58,6 +58,8 @@ where they end in `sorry`) and proved in
 | Claim | Theorem |
 |-------|---------|
 | Parsing the printed form of a well formed document gives the document back. | `Spec.parse_print` |
+| Every text the parser accepts gives a well formed document (`Xml.WF`, described below): among other things, no name holds a colon or starts with a digit, no attribute name stands twice on one element and none is `xmlns`, every character is a legal XML character, and comment bodies hold no `--`. | `Spec.parse_wf` |
+| Printing a document the parser accepted gives a text that parses back to the same document (the plan's main claim, as written). | `Spec.print_parse` |
 | A document carrying a document type declaration is refused. | `Spec.rejects_doctype` |
 | A reference to an entity the subset does not define is refused. | `Spec.rejects_undefined_entity` |
 | An end tag that does not match the start tag is refused. | `Spec.rejects_mismatched_tags` |
@@ -115,13 +117,21 @@ are about.
 
 ## What is not proved
 
+- That the tree the parser gives is the right reading of
+  the text. `Spec.parse_wf` says the tree is well formed
+  and `Spec.print_parse` that it survives printing, but
+  neither ties the tree to the text it came from: a parser
+  that read `&e;` as some character, or dropped an
+  attribute, would meet both. A parser that refuses every
+  text also meets both; `Spec.parse_print` rules that one
+  out. The differential tests check the reading against
+  ElementTree instead.
 - That the parser accepts every text the subset allows,
-  and rejects every text it forbids. The round trip does
-  not need either, and the refusal theorems pin single
-  inputs only, so neither holds in general as a proof.
-  The differential tests check that behaviour instead,
-  and the results file records the outcome, including any
-  failure.
+  and rejects every text it forbids. The refusal theorems
+  pin single inputs only, so neither holds in general as a
+  proof. The differential tests check that behaviour
+  instead, and the results file records the outcome,
+  including any failure.
 - Anything about documents outside the subset: documents
   with a document type declaration, entities beyond the
   five predefined ones, namespaces, an XML declaration,

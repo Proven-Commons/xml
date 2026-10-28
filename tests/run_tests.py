@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the Lean XML safe-subset parser and printer.
 
-Three parts.
+Four parts.
 
 1. Fixed cases: hand written documents covering each feature of
    the subset (nesting, both quote forms, empty elements in both
@@ -39,7 +39,11 @@ Three parts.
    return in the tree's text or attribute values is spelled as a
    character reference, the only way to keep one.
 
-3. Named rejections: one input per rejection rule in SPEC.md.
+3. Print then parse: every canonical print the tool gave in parts
+   1 and 2 is sent back, and the answer must be the same print
+   (`Spec.print_parse`, run on the compiled tool).
+
+4. Named rejections: one input per rejection rule in SPEC.md.
    The Lean tool must reject every one. ElementTree agrees with
    most of them; where ElementTree accepts (a document type
    declaration, a colon in a name, the XML declaration form),
@@ -733,6 +737,7 @@ def main():
     # Part 1: fixed cases.
     inputs = [t for t, _ in FIXED]
     answers = run_requests(inputs, failures, "fixed cases")
+    fixed_answers = answers
     fixed_ok = 0
     for (text, expected), ans in zip(FIXED, answers):
         want = "ok:" + codes(expected)
@@ -751,6 +756,7 @@ def main():
         gen_inputs.append(text)
         gen_docs.append(doc)
     answers = run_requests(gen_inputs, failures, "generated")
+    gen_answers = answers
     gen_ok = 0
     et_ok = 0
     for text, doc, ans in zip(gen_inputs, gen_docs, answers):
@@ -775,7 +781,22 @@ def main():
         else:
             gen_ok += 1
 
-    # Part 3: named rejections. Also record ElementTree's verdict
+    # Part 3: print then parse. Every canonical print the tool gave
+    # in parts 1 and 2 is sent back; the answer must be the same
+    # print (Spec.print_parse, run on the compiled tool).
+    printed = []
+    for ans in fixed_answers + gen_answers:
+        if ans.startswith("ok:") and len(ans) > 3:
+            printed.append("".join(chr(int(x)) for x in ans[3:].split(",")))
+    re_answers = run_requests(printed, failures, "print then parse")
+    reprint_ok = 0
+    for text, ans in zip(printed, re_answers):
+        if ans == "ok:" + codes(text):
+            reprint_ok += 1
+        else:
+            failures.append("print then parse %r: got %r" % (text, ans[:120]))
+
+    # Part 4: named rejections. Also record ElementTree's verdict
     # on each: accepted means an out of subset disagreement.
     rej_inputs = [t for _, t in REJECTIONS]
     answers = run_requests(rej_inputs, failures, "named rejections")
@@ -813,8 +834,8 @@ def main():
     lines.append("Written by `tests/run_tests.py`. Rerun it to "
                  "check these numbers.")
     lines.append("")
-    total = (len(FIXED) + len(gen_inputs) + len(REJECTIONS)
-             + len(MALFORMED) + 2)
+    total = (len(FIXED) + len(gen_inputs) + len(printed)
+             + len(REJECTIONS) + len(MALFORMED) + 2)
     lines.append("- Oracle: Python %s `xml.etree.ElementTree`, "
                  "%s (`ET.XMLParser`, which turns namespace "
                  "processing on, with a `TreeBuilder` that keeps "
@@ -824,8 +845,9 @@ def main():
     lines.append("- Seed: %d" % args.seed)
     lines.append("- Inputs: %d" % total)
     lines.append("  - every request sent to the tool: the fixed cases, "
-                 "the generated documents, the named rejections, the "
-                 "malformed requests, and two bare parse requests")
+                 "the generated documents, the canonical prints sent "
+                 "back, the named rejections, the malformed requests, "
+                 "and two bare parse requests")
     lines.append("- Fixed cases passed: %d of %d"
                  % (fixed_ok, len(FIXED)))
     lines.append("- Generated in-subset documents: %d" % len(gen_inputs))
@@ -834,6 +856,8 @@ def main():
                  "the tree: %d" % gen_ok)
     lines.append("- ElementTree tree agreements on generated "
                  "documents: %d" % et_ok)
+    lines.append("- Canonical prints that parse back to the same "
+                 "print: %d of %d" % (reprint_ok, len(printed)))
     lines.append("- Named rejections rejected by the tool: %d of %d"
                  % (rej_ok, len(REJECTIONS)))
     lines.append("- Out of subset disagreements (ElementTree "

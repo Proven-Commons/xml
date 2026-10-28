@@ -218,6 +218,8 @@ each rule on many more inputs.
 | Property | Theorem |
 |----------|---------|
 | Parsing the printed form of a well formed document gives the document back | `Spec.parse_print` |
+| Every text the parser accepts gives a well formed document (`WF`, as stated under Well formed trees) | `Spec.parse_wf` |
+| Printing a document the parser accepted gives a text that parses back to the same document | `Spec.print_parse` |
 | A document carrying a document type declaration is refused | `Spec.rejects_doctype` |
 | A reference to an entity the subset does not define is refused | `Spec.rejects_undefined_entity` |
 | An end tag that does not match the start tag is refused | `Spec.rejects_mismatched_tags` |
@@ -239,6 +241,15 @@ each rule on many more inputs.
 | A carriage return not followed by a line feed reads exactly as a line feed, anywhere in a text, unless the text before it ends with a carriage return | `Spec.cr_reads_as_lf` |
 | An attribute name right after the closing quote of the attribute before it, with no whitespace between them, is refused, on the root element after any well formed prolog and at least one well formed attribute, printed, whatever follows the first character of the name | `Spec.rejects_attribute_without_space` |
 | An attribute named `xmlns` on the root element is refused, after any well formed prolog and any well formed attributes before it, printed, whatever follows the name that does not make it longer | `Spec.rejects_xmlns` |
+
+`Spec.parse_wf` holds for every text: whatever the parser
+accepts meets every rule under Well formed trees. With the
+round trip it gives `Spec.print_parse`, the plan's main claim
+as written. Both hold for a parser that refuses every text;
+`Spec.parse_print` is the statement such a parser fails.
+Neither says that the tree is the right reading of the text:
+that rests on the tests. The proof is
+`Xml.Proofs.parse_wf` in `Proofs/ParseWF.lean`.
 
 The round trip behind `Spec.parse_print` is
 `Xml.Proofs.parse_print` in `Proofs/RoundTrip.lean`. Its

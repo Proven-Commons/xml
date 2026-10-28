@@ -29,6 +29,32 @@ the same well formedness predicate, `Xml.WF`. -/
 theorem Spec.parse_print (d : Document) (hwf : WF d) :
     parse (print d) = some d := sorry
 
+/-! ## Every accepted document
+
+The two statements below hold for every text. A parser that refuses
+every text meets both, so they are paired with `Spec.parse_print`,
+which such a parser fails. -/
+
+/-- Every text the parser accepts gives a well formed document, as
+    `Xml.WF` defines it: every name follows the subset's name rule
+    (so no name holds a colon or starts with a digit), no attribute
+    name stands twice on an element and none is `xmlns`, every
+    character in text, attribute values, comments and processing
+    instruction data is a legal XML character, no two text runs
+    stand next to each other and none is empty, comment bodies hold
+    no `--`, do not end with `-` and hold no carriage return,
+    processing instruction targets are not `xml` in any letter case
+    and their data holds no `?>`, does not start with whitespace and
+    holds no carriage return, the root is an element, and the prolog
+    and epilog hold only comments and processing instructions. -/
+theorem Spec.parse_wf (cs : List Char) (d : Document)
+    (h : parse cs = some d) : WF d := sorry
+
+/-- The plan's main claim, as written: printing a parsed document
+    gives a text that parses to the same document. -/
+theorem Spec.print_parse (cs : List Char) (d : Document)
+    (h : parse cs = some d) : parse (print d) = some d := sorry
+
 /-! ## Refused inputs
 
 Single inputs the parser refuses, one for each headline rule of
