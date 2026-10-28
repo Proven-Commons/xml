@@ -166,8 +166,14 @@ parsed leniently.
 - The same door rejects every other `<!` form that is not a
   comment or (inside content) a CDATA section: `<!ENTITY`,
   `<!ELEMENT`, and the rest. There are no declarations of any
-  kind in this subset, so the parser never expands an entity
-  beyond the five predefined ones, because none exist.
+  kind in this subset, so the parser must never expand an
+  entity beyond the five predefined ones. This is a rule, and
+  only part of it is a theorem: under Properties and their
+  theorems, `Spec.rejects_undefined_entity` covers the root's
+  first run of character data and
+  `Spec.rejects_undefined_entity_in_attribute` the root's
+  attribute values. Every other position, a nested element
+  among them, rests on the tests.
 
 ## Printing
 

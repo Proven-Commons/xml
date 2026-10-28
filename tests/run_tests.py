@@ -400,6 +400,19 @@ REJECTIONS = [
     ("duplicate attribute after another", "<a b=\"1\" c=\"2\" b=\"3\"/>"),
     ("raw < after text in an attribute value", "<a b=\"xy<\"/>"),
     ("unquoted value after another attribute", "<a b=\"1\" c=x/>"),
+    # undefined entities where no theorem covers them (the refusal
+    # statements reach the root's first text run and the root's
+    # attribute values only; see SPEC.md and README)
+    ("undefined entity in a nested element", "<a><b>&e;</b></a>"),
+    ("undefined entity after a child element", "<a><b/>&e;</a>"),
+    ("undefined entity after a comment", "<a><!--c-->&e;</a>"),
+    ("undefined entity after a CDATA section",
+     "<a><![CDATA[x]]>&e;</a>"),
+    ("undefined entity after a predefined one", "<a>&amp;&e;</a>"),
+    ("undefined entity in a nested element's attribute",
+     "<a><b c=\"&e;\"/></a>"),
+    ("undefined entity in an attribute after a reference",
+     "<a b=\"&lt;&e;\"/>"),
     # inputs review 1 (finding 7) listed as missing
     ("hex reference with an upper case X", "<a>&#X41;</a>"),
     ("reference to a non-character", "<a>&#xFFFE;</a>"),
