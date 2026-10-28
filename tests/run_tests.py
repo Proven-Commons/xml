@@ -30,17 +30,14 @@ Three parts.
      (for the root element; ElementTree does not keep the prolog
      and epilog) must equal the tree that was generated.
 
-   Named differences, counted apart and not failures:
-
-   - ElementTree normalizes a literal carriage return in text,
-     comments, processing instruction data, and CDATA to a line
-     feed (XML line ending normalization). This slice keeps the
-     carriage return as it is; it is a stated boundary in
-     SPEC.md. The generator therefore never writes a literal
-     carriage return in those positions (a carriage return in a
-     tree is always spelled as a character reference there).
-     Literal carriage returns and tabs in attribute values are
-     fine: both sides read them as a space.
+   Line ends: both sides normalize a literal carriage return and
+   line feed pair, and a lone carriage return, to a line feed
+   before parsing (XML 1.0 section 2.11). The generator spells a
+   line feed of the tree as a line feed, a carriage return and
+   line feed pair, or a lone carriage return, in text, comments,
+   processing instruction data, tags and the top level. A carriage
+   return in the tree's text or attribute values is spelled as a
+   character reference, the only way to keep one.
 
 3. Named rejections: one input per rejection rule in SPEC.md.
    The Lean tool must reject every one. ElementTree agrees with
@@ -292,6 +289,18 @@ FIXED = [
     ("<xmlns/>", "<xmlns/>"),
     # any whitespace separates attributes: space, tab, line feed
     ("<a\tb=\"1\"\nc='2' \t d=\"3\"\n/>", '<a b="1" c="2" d="3"/>'),
+    # line ends: CR LF and a lone CR read as LF (XML 1.0 2.11),
+    # everywhere; only a character reference keeps a CR
+    ("<a>x\r\ny</a>", "<a>x\ny</a>"),
+    ("<a>x\ry</a>", "<a>x\ny</a>"),
+    ("<a>x\r\r\ny\n\rz\r</a>", "<a>x\n\ny\n\nz\n</a>"),
+    ("<a>&#13;\r\n&#xD;</a>", "<a>&#13;\n&#13;</a>"),
+    ("<a><![CDATA[x\r\ny\rz]]></a>", "<a>x\ny\nz</a>"),
+    ("<!--a\r\nb\rc--><a/>", "<!--a\nb\nc--><a/>"),
+    ("<a><?p a\r\nb\rc?></a>", "<a><?p a\nb\nc?></a>"),
+    ("<a b=\"x\r\ny\rz\"/>", '<a b="x y z"/>'),
+    ("\r\n<a\r\nb=\"1\"\r/>\r", '<a b="1"/>'),
+    ("<a>x</a\r>", "<a>x</a>"),
 ]
 
 # Named rejections: (rule, input). ElementTree's verdict is
@@ -404,10 +413,23 @@ def gen_name(rng):
         rng.choice(NAME_CHARS) for _ in range(n - 1))
 
 
-def spell_text_char(rng, c, emitted):
+def spell_line_end(rng, next_char):
+    """One spelling of a line feed of the tree: a line feed, a
+    carriage return and line feed pair, or a lone carriage return.
+    A lone carriage return is chosen only when the next character
+    of the spelling cannot be a literal line feed, which would
+    pair with it."""
+    if next_char == "\n":
+        return rng.choice(["\n", "\r\n"])
+    return rng.choice(["\n", "\r\n", "\r"])
+
+
+def spell_text_char(rng, c, emitted, next_char=None):
     """One spelling of a text character, and it is never a raw
     less sign, a raw ampersand, or a raw greater sign right after
     two right brackets."""
+    if c == "\n":
+        return spell_line_end(rng, next_char)
     if c == "&":
         return "&amp;"
     if c == "<":
@@ -418,7 +440,7 @@ def spell_text_char(rng, c, emitted):
         return "&#62;"
     if c == "\r":
         return rng.choice(["&#13;", "&#xD;"])
-    if c == "\n" or c == "\t":
+    if c == "\t":
         return c
     r = rng.random()
     if r < 0.06:
@@ -444,8 +466,10 @@ def gen_text_run(rng):
             chars.append("<")
         elif r < 0.90:
             chars.append(">")
-        elif r < 0.94:
+        elif r < 0.92:
             chars.append("\r")
+        elif r < 0.95:
+            chars.append("\n")
         elif r < 0.97:
             chars.append("'")
         else:
@@ -477,7 +501,8 @@ def gen_text_run(rng):
                 emitted += "".join(buf)
                 i = j
                 continue
-        sp = spell_text_char(rng, chars[i], emitted)
+        nxt = chars[i + 1] if i + 1 < len(chars) else None
+        sp = spell_text_char(rng, chars[i], emitted, nxt)
         pieces.append(sp)
         emitted += chars[i]
         i += 1
@@ -534,13 +559,35 @@ def gen_attr_value(rng):
     return "".join(toks), "".join(model), quote
 
 
+def join_words(rng, words):
+    """Words joined by a space or, now and then, by a line end:
+    returns (spelling, model). Words never start with a line
+    feed, so a lone carriage return is safe between them."""
+    sp = []
+    model = []
+    for i, w in enumerate(words):
+        if i > 0:
+            if rng.random() < 0.2:
+                sp.append(spell_line_end(rng, None))
+                model.append("\n")
+            else:
+                sp.append(" ")
+                model.append(" ")
+        sp.append(w)
+        model.append(w)
+    return "".join(sp), "".join(model)
+
+
 def gen_comment(rng):
     words = [rng.choice(COMMENT_WORDS)
              for _ in range(rng.randint(0, 4))]
-    body = " " + " ".join(words) + " " if words else ""
+    sp, model = join_words(rng, words)
+    body_sp = " " + sp + " " if words else ""
+    body = " " + model + " " if words else ""
     if rng.random() < 0.3:
+        body_sp = body_sp + "- x "
         body = body + "- x "
-    return "<!--" + body + "-->", ("comment", body)
+    return "<!--" + body_sp + "-->", ("comment", body)
 
 
 def gen_pi(rng):
@@ -551,15 +598,15 @@ def gen_pi(rng):
         return "<?" + target + "?>", ("pi", target, "")
     words = [rng.choice(COMMENT_WORDS)
              for _ in range(rng.randint(1, 3))]
-    data = " ".join(words)
-    return ("<?" + target + " " + data + "?>",
+    sp, data = join_words(rng, words)
+    return ("<?" + target + " " + sp + "?>",
             ("pi", target, data))
 
 
 # Whitespace inside tags and at the top level. A separator before an
 # attribute is never empty: XML 1.0 [40] and [44] require one.
-SEPS = [" ", " ", " ", "  ", "\t", "\n", " \n\t"]
-OPT_WS = ["", "", "", " ", "\n", "\t "]
+SEPS = [" ", " ", " ", "  ", "\t", "\n", " \n\t", "\r\n", "\r"]
+OPT_WS = ["", "", "", " ", "\n", "\t ", "\r\n", "\r"]
 
 
 def gen_sep(rng):

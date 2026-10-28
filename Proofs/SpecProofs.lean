@@ -10,6 +10,7 @@
 import Xml
 import Proofs.RoundTrip
 import Proofs.Refusals
+import Proofs.LineEnds
 
 open Xml
 
@@ -122,3 +123,15 @@ theorem Spec.rejects_attribute_without_space (prolog : List Node)
       c :: rest) = none :=
   Xml.Proofs.rejects_attribute_without_space prolog name attrs c rest
     hpro hname hattrs hne hc
+
+
+theorem Spec.crlf_reads_as_lf (pre post : List Char)
+    (hpre : pre.getLast? ≠ some '\r') :
+    parse (pre ++ '\r' :: '\n' :: post) = parse (pre ++ '\n' :: post) :=
+  Xml.Proofs.crlf_reads_as_lf pre post hpre
+
+
+theorem Spec.cr_reads_as_lf (pre post : List Char)
+    (hpre : pre.getLast? ≠ some '\r') (hpost : post.head? ≠ some '\n') :
+    parse (pre ++ '\r' :: post) = parse (pre ++ '\n' :: post) :=
+  Xml.Proofs.cr_reads_as_lf pre post hpre hpost

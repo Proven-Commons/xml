@@ -75,19 +75,28 @@ where they end in `sorry`) and proved in
 | An attribute value with no quotes is refused. | `Spec.rejects_unquoted_attribute` |
 | A CDATA section in the prolog is refused. | `Spec.rejects_cdata_in_prolog` |
 | The XML declaration form is refused. | `Spec.rejects_xml_declaration` |
+| A carriage return followed by a line feed reads exactly as one line feed, anywhere in a text, unless the text before it ends with a carriage return (XML 1.0 section 2.11). | `Spec.crlf_reads_as_lf` |
+| A carriage return not followed by a line feed reads exactly as a line feed, anywhere in a text, unless the text before it ends with a carriage return. | `Spec.cr_reads_as_lf` |
 | An attribute name that starts right after the closing quote of the attribute before it, with no whitespace between them, is refused: on the root element, after any well formed prolog and at least one well formed attribute, both printed in canonical form, whatever follows the first character of the name. | `Spec.rejects_attribute_without_space` |
 | An attribute named `xmlns` (a default namespace declaration) on the root element is refused: after any well formed prolog and any well formed attributes before it, both printed in canonical form, whatever follows the name, as long as it does not make the name longer. | `Spec.rejects_xmlns` |
 
 A document is well formed when its names match the
 subset's name rule, attribute names are unique per
 element and none is `xmlns`, text holds only legal XML
-characters and no two
-text runs stand next to each other, comment bodies
-contain no `--` and do not end with `-`, processing
-instruction targets are valid and not the reserved word
-`xml`, and the prolog and epilog hold only comments and
-processing instructions. `SPEC.md` states the rules in
-full.
+characters and no two text runs stand next to each
+other, comment bodies contain no `--`, do not end with
+`-` and hold no carriage return, processing instruction
+targets are valid and not the reserved word `xml` and
+their data holds no carriage return, and the prolog and
+epilog hold only comments and processing instructions.
+`SPEC.md` states the rules in full.
+
+The parser normalizes line ends before it reads, as
+XML 1.0 section 2.11 requires: a carriage return and
+line feed pair, and a lone carriage return, each read as
+one line feed. A carriage return written as `&#13;` in
+text or an attribute value reads as itself, and the
+printer writes it that way.
 
 The round trip theorem rests on the proof in
 `Proofs/RoundTrip.lean`, where it is
@@ -127,20 +136,13 @@ are about.
   length of the input text, which very deep inputs can
   reach.
 
-Three deliberate choices, also stated in `SPEC.md`:
+Two deliberate choices, also stated in `SPEC.md`:
 
 - CDATA sections are a spelling, not a tree difference.
   CDATA content becomes ordinary character data in the
   same text node stream, and the printer never writes a
   CDATA section. The claim is at tree level, so this is
   sound.
-- There is no line ending normalization in text,
-  comments, processing instruction data, or CDATA: a
-  literal carriage return reads as itself. Full XML
-  normalizes it to a line feed. Inside attribute values
-  both readings agree (either form reads as a space), and
-  the printer always writes a carriage return as a
-  character reference.
 - The XML declaration is not in the model. A processing
   instruction target of `xml` in any letter case rejects
   everywhere, which keeps the declaration out.

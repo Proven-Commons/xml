@@ -36,7 +36,8 @@ code = [
   "Xml.parseTextRun", "Xml.parseCDATABody", "Xml.parseCommentBody",
   "Xml.parsePIData", "Xml.parseAttrValue", "Xml.parsePI",
   "Xml.parseCharData", "Xml.startsWithWs", "Xml.parseAttrs", "Xml.parseElement",
-  "Xml.parseNodes", "Xml.parseMisc", "Xml.parseDocument", "Xml.parse",
+  "Xml.parseNodes", "Xml.parseMisc", "Xml.parseDocument", "Xml.normEol",
+  "Xml.parse",
 ]
 
 # One entry per approval, added in a pull request the reviewer approves.

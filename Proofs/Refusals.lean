@@ -12,6 +12,7 @@
 
 import Xml
 import Proofs.RoundTrip
+import Proofs.LineEnds
 
 namespace Xml.Proofs
 
@@ -21,11 +22,22 @@ open Xml
 
 /-- A text made of a printed prolog and then a less sign and a name
     start character is refused when the element reader refuses the
-    root at every fuel large enough. -/
+    root, with its line ends normalized, at every fuel large
+    enough. -/
 theorem parse_root_none (prolog : List Node) (hpro : MiscOk prolog)
-    (c : Char) (cs : List Char) (hc : IsNameStart c)
-    (he : ∀ f, cs.length + 3 ≤ f → parseElement f ('<' :: c :: cs) = none) :
-    parse (printNodes prolog ++ '<' :: c :: cs) = none := by
+    (c : Char) (cs0 : List Char) (hc : IsNameStart c)
+    (he : ∀ f, (normEol cs0).length + 3 ≤ f →
+      parseElement f ('<' :: c :: normEol cs0) = none) :
+    parse (printNodes prolog ++ '<' :: c :: cs0) = none := by
+  have hcr : c ≠ '\r' := fun e => not_nameChar_cr (e ▸ IsNameStart.toNameChar hc)
+  have hn : normEol (printNodes prolog ++ '<' :: c :: cs0) =
+      printNodes prolog ++ '<' :: c :: normEol cs0 := by
+    rw [normEol_append_noCR _ _ (noCR_printNodes_misc prolog hpro),
+      normEol_cons_ne (by decide), normEol_cons_ne hcr]
+  show parseDocument ((normEol (printNodes prolog ++ '<' :: c :: cs0)).length + 1)
+    (normEol (printNodes prolog ++ '<' :: c :: cs0)) = none
+  rw [hn]
+  generalize normEol cs0 = cs at he
   have hstop : ∀ f, 1 ≤ f →
       parseMisc f ('<' :: c :: cs) = some ([], skipWs ('<' :: c :: cs)) := by
     intro f hf
@@ -40,7 +52,6 @@ theorem parse_root_none (prolog : List Node) (hpro : MiscOk prolog)
   rw [skipWs_cons (show isWs '<' = false by decide)] at hm
   have hroot := he ((printNodes prolog ++ '<' :: c :: cs).length + 1)
     (by simp only [List.length_append, List.length_cons]; omega)
-  show parseDocument _ _ = none
   simp only [parseDocument, hm, hroot]
 
 /-- The element reader at a start tag whose name is read whole: it
@@ -69,21 +80,26 @@ theorem printAttrs_head_not_name (attrs : List (List Char × List Char))
 
 /-- A root start tag with printed attributes, at the head of a text
     after a printed prolog, is refused when the attribute reader
-    refuses whatever follows the printed attributes, at any fuel
-    from one up. -/
+    refuses whatever follows the printed attributes, with its line
+    ends normalized, at any fuel from one up. -/
 theorem parse_attrs_none (prolog : List Node) (hpro : MiscOk prolog)
     (name : List Char) (hname : ValidName name)
     (attrs : List (List Char × List Char)) (hattrs : AttrsOk attrs)
-    (tail : List Char)
-    (ht : ∀ c, (printAttrs attrs ++ tail).head? = some c →
+    (tail0 : List Char)
+    (ht : ∀ c, (printAttrs attrs ++ normEol tail0).head? = some c →
       isNameChar c = false)
-    (hcont : ∀ f, 1 ≤ f → parseAttrs f attrs tail = none) :
-    parse (printNodes prolog ++ '<' :: (name ++ (printAttrs attrs ++ tail))) =
+    (hcont : ∀ f, 1 ≤ f → parseAttrs f attrs (normEol tail0) = none) :
+    parse (printNodes prolog ++ '<' :: (name ++ (printAttrs attrs ++ tail0))) =
       none := by
+  have hnn := noCR_validName hname
   obtain ⟨c0, ds, hq, hc0, hds⟩ := hname
   subst hq
   rw [List.cons_append]
   apply parse_root_none prolog hpro c0 _ hc0
+  have hds' : '\r' ∉ ds := fun m => hnn (List.mem_cons_of_mem _ m)
+  rw [normEol_append_noCR _ _ hds',
+    normEol_append_noCR _ _ (noCR_printAttrs attrs hattrs)]
+  generalize normEol tail0 = tail at ht hcont
   intro f hf
   cases f with
   | zero => omega
@@ -146,15 +162,21 @@ theorem rejects_xmlns (prolog : List Node) (name : List Char)
         ' ' :: (xmlnsName ++ rest))) := by
     simp [List.append_assoc]
   rw [e]
+  have hn : normEol (' ' :: (xmlnsName ++ rest)) =
+      ' ' :: (xmlnsName ++ normEol rest) := by
+    rw [normEol_cons_ne (by decide),
+      normEol_append_noCR _ _ (by decide)]
   apply parse_attrs_none prolog hpro name hname attrs hattrs
-  · apply printAttrs_head_not_name
+  · rw [hn]
+    apply printAttrs_head_not_name
     intro c hc
     simp at hc
     rw [← hc]
     exact isNameChar_false_of not_nameChar_space
   · intro f hf
-    exact parseAttrs_xmlns f hf attrs rest
-      (fun c hc => isNameChar_false_of (hrest c hc))
+    rw [hn]
+    exact parseAttrs_xmlns f hf attrs (normEol rest)
+      (normEol_head_not_name rest hrest)
 
 /-! ## Whitespace between attributes -/
 
@@ -212,8 +234,11 @@ theorem rejects_attribute_without_space (prolog : List Node)
         c :: rest)) := by
     simp [List.append_assoc]
   rw [e]
-  exact parse_attrs_none prolog hpro name hname attrs hattrs (c :: rest)
-    (printAttrs_head_space attrs hne (c :: rest))
-    (fun f hf => parseAttrs_no_space f hf attrs c rest hc)
+  have hcr : c ≠ '\r' := fun e => not_nameChar_cr (e ▸ IsNameStart.toNameChar hc)
+  apply parse_attrs_none prolog hpro name hname attrs hattrs (c :: rest)
+    (printAttrs_head_space attrs hne _)
+  intro f hf
+  rw [normEol_cons_ne hcr]
+  exact parseAttrs_no_space f hf attrs c (normEol rest) hc
 
 end Xml.Proofs

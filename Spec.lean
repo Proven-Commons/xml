@@ -143,3 +143,20 @@ theorem Spec.rejects_attribute_without_space (prolog : List Node)
     (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
     parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
       c :: rest) = none := sorry
+
+/-- Line ends are normalized as XML 1.0 section 2.11 requires: a
+    carriage return followed by a line feed reads exactly as one
+    line feed, wherever it stands in the text, unless the text
+    before it ends with a carriage return (which pairs with the
+    line feed first). -/
+theorem Spec.crlf_reads_as_lf (pre post : List Char)
+    (hpre : pre.getLast? ≠ some '\r') :
+    parse (pre ++ '\r' :: '\n' :: post) = parse (pre ++ '\n' :: post) :=
+  sorry
+
+/-- A carriage return that is not followed by a line feed reads
+    exactly as a line feed, wherever it stands in the text, unless
+    the text before it ends with a carriage return. -/
+theorem Spec.cr_reads_as_lf (pre post : List Char)
+    (hpre : pre.getLast? ≠ some '\r') (hpost : post.head? ≠ some '\n') :
+    parse (pre ++ '\r' :: post) = parse (pre ++ '\n' :: post) := sorry

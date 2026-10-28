@@ -8,6 +8,21 @@ counts toward the verified bar yet.
 
 Text is `List Char`. A Lean `Char` is one Unicode scalar value.
 
+## Line ends
+
+Before anything else, the parser normalizes line ends, as XML 1.0
+section 2.11 requires: a carriage return followed by a line feed
+becomes one line feed, and a carriage return followed by anything
+else, or by nothing, becomes a line feed. This holds everywhere:
+in text, CDATA sections, comments, processing instruction data,
+attribute values, tags, and between the top level items. So a
+literal carriage return never reaches the tree. A carriage return
+written as the character reference `&#13;` or `&#xD;` in text or
+in an attribute value reads as itself, and the printer writes a
+carriage return in text or an attribute value as `&#13;`, the only
+way to keep one. A comment or a processing instruction has no
+references, so it never holds a carriage return.
+
 ## The subset in one paragraph
 
 A document is a prolog of comments and processing instructions,
@@ -75,8 +90,9 @@ parsed leniently.
   predefined entities are expanded on read. A raw `<` rejects.
   A raw `&` that does not begin a valid reference rejects.
 - Attribute value normalization: a literal tab or line feed in
-  a value reads as one space, and a literal carriage return or
-  carriage return with line feed reads as one space. This is
+  a value reads as one space. A literal carriage return, alone or
+  before a line feed, has already become one line feed (see Line
+  ends), so it reads as one space too. This is
   XML's rule for CDATA type attributes, and every attribute here
   is CDATA type because there is no document type declaration
   to say otherwise. A tab or line feed spelled as a character
@@ -183,10 +199,11 @@ formedness predicate (`WF` in `Xml/Value.lean`):
   parser merges them, so an unmerged tree could not come
   back);
 - comment bodies hold only legal characters, contain no `--`,
-  and do not end with `-`;
+  do not end with `-`, and hold no carriage return;
 - processing instruction targets are valid names and not the
   reserved word, their data holds only legal characters, never
-  contains `?>`, and never starts with whitespace;
+  contains `?>`, never starts with whitespace, and holds no
+  carriage return;
 - the root is an element, and the prolog and epilog hold only
   comments and processing instructions.
 
@@ -218,6 +235,8 @@ each rule on many more inputs.
 | An attribute value with no quotes is refused | `Spec.rejects_unquoted_attribute` |
 | A CDATA section in the prolog is refused | `Spec.rejects_cdata_in_prolog` |
 | The XML declaration form is refused | `Spec.rejects_xml_declaration` |
+| A carriage return followed by a line feed reads exactly as one line feed, anywhere in a text, unless the text before it ends with a carriage return | `Spec.crlf_reads_as_lf` |
+| A carriage return not followed by a line feed reads exactly as a line feed, anywhere in a text, unless the text before it ends with a carriage return | `Spec.cr_reads_as_lf` |
 | An attribute name right after the closing quote of the attribute before it, with no whitespace between them, is refused, on the root element after any well formed prolog and at least one well formed attribute, printed, whatever follows the first character of the name | `Spec.rejects_attribute_without_space` |
 | An attribute named `xmlns` on the root element is refused, after any well formed prolog and any well formed attributes before it, printed, whatever follows the name that does not make it longer | `Spec.rejects_xmlns` |
 
@@ -240,17 +259,6 @@ against that list.
 
 ## Boundaries and named differences
 
-- No line ending normalization in text, comments, processing
-  instruction data, or CDATA sections: a literal carriage
-  return there reads as itself. Full XML normalizes carriage
-  return and carriage return with line feed to a line feed
-  before parsing, and Python's ElementTree does so. That is a
-  difference between this subset and full XML, stated plainly:
-  a text a full XML parser reads one way can read with a line
-  feed where this parser keeps a carriage return. Inside
-  attribute values both readings agree, because normalization
-  there sends either form to a space, and in printed form a
-  carriage return is always a character reference.
 - No document type declaration, no entities beyond the five,
   no namespaces, no XML declaration, ASCII names only. A full
   XML parser may accept documents this slice rejects for

@@ -1553,10 +1553,130 @@ theorem parseMisc_print :
             skipWs_cons (show isWs '<' = false by decide),
             List.append_assoc]
 
+/-! ## Line ends
+
+The parser normalizes line ends before it reads. The print of a well
+formed document holds no carriage return: text and attribute values
+write one as a character reference, and comments and processing
+instructions hold none. So normalization leaves the print as it is. -/
+
+theorem normEol_cons_ne {c : Char} (h : c ≠ '\r') (rest : List Char) :
+    normEol (c :: rest) = c :: normEol rest :=
+  normEol.eq_4 c rest (fun _ e _ => h e) h
+
+theorem normEol_of_noCR : ∀ (cs : List Char), '\r' ∉ cs → normEol cs = cs
+  | [], _ => normEol.eq_1
+  | c :: rest, h => by
+    have hc : c ≠ '\r' := fun e => h (e ▸ List.mem_cons_self)
+    have hr : '\r' ∉ rest := fun m => h (List.mem_cons_of_mem _ m)
+    rw [normEol_cons_ne hc, normEol_of_noCR rest hr]
+
+theorem noCR_escapeTextChar (c : Char) : '\r' ∉ escapeTextChar c := by
+  rcases escapeTextChar_cases c with
+    ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, _, _, h4, h⟩
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]
+    simp only [List.mem_singleton]
+    exact fun e => h4 e.symm
+
+theorem noCR_escapeAttrChar (c : Char) : '\r' ∉ escapeAttrChar c := by
+  rcases escapeAttrChar_cases c with
+    ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ |
+    ⟨_, _, _, _, _, h6, h⟩
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]; decide
+  · rw [h]
+    simp only [List.mem_singleton]
+    exact fun e => h6 e.symm
+
+theorem noCR_escapeText (cs : List Char) : '\r' ∉ escapeText cs := by
+  simp only [escapeText, List.mem_flatMap, not_exists, not_and]
+  intro c _
+  exact noCR_escapeTextChar c
+
+theorem noCR_escapeAttr (cs : List Char) : '\r' ∉ escapeAttr cs := by
+  simp only [escapeAttr, List.mem_flatMap, not_exists, not_and]
+  intro c _
+  exact noCR_escapeAttrChar c
+
+theorem not_nameChar_cr : ¬ IsNameChar '\r' :=
+  not_nameChar_of_test (by decide)
+
+theorem noCR_validName {cs : List Char} (h : ValidName cs) : '\r' ∉ cs := by
+  obtain ⟨c, ds, rfl, hc, hds⟩ := h
+  intro m
+  rcases List.mem_cons.mp m with e | e
+  · exact not_nameChar_cr (e ▸ IsNameStart.toNameChar hc)
+  · exact not_nameChar_cr (hds _ e)
+
+theorem noCR_printAttrs : ∀ (attrs : List (List Char × List Char)),
+    AttrsOk attrs → '\r' ∉ printAttrs attrs
+  | [], _ => by simp [printAttrs]
+  | (k, v) :: rest, h => by
+    have h1 := noCR_validName h.1
+    have h2 := noCR_escapeAttr v
+    have h3 := noCR_printAttrs rest h.2.2.2.2
+    simp [printAttrs, h1, h2, h3]
+
+mutual
+theorem noCR_printNode : ∀ (n : Node), WFNode n → '\r' ∉ printNode n
+  | .text cs, _ => by simpa [printNode] using noCR_escapeText cs
+  | .elem name attrs content, h => by
+    cases h with
+    | elem hname hattrs hcontent =>
+      have h1 := noCR_validName hname
+      have h2 := noCR_printAttrs attrs hattrs
+      have h3 := noCR_printNodes content hcontent
+      simp only [printNode, printElem]
+      split <;> simp [h1, h2, h3]
+  | .comment cs, h => by
+    cases h with
+    | comment _ _ _ hcr => simp [printNode, hcr]
+  | .pi t d, h => by
+    cases h with
+    | pi hname _ _ _ _ hcr =>
+      have h1 := noCR_validName hname
+      simp only [printNode]
+      split <;> simp [h1, hcr]
+theorem noCR_printNodes : ∀ (ns : List Node), WFNodes ns →
+    '\r' ∉ printNodes ns
+  | [], _ => by simp [printNodes]
+  | n :: ns, h => by
+    cases h with
+    | cons hn hns _ =>
+      have h1 := noCR_printNode n hn
+      have h2 := noCR_printNodes ns hns
+      simp [printNodes, h1, h2]
+end
+
+theorem noCR_printNodes_misc : ∀ (ns : List Node), MiscOk ns →
+    '\r' ∉ printNodes ns
+  | [], _ => by simp [printNodes]
+  | n :: ns, h => by
+    have h1 := noCR_printNode n (h n (by simp)).1
+    have h2 := noCR_printNodes_misc ns (fun m hm => h m (by simp [hm]))
+    simp [printNodes, h1, h2]
+
+theorem noCR_print (d : Document) (hwf : WF d) : '\r' ∉ print d := by
+  obtain ⟨hpro, hroot, _, hepi⟩ := hwf
+  have h1 := noCR_printNodes_misc d.prolog hpro
+  have h2 := noCR_printNode d.root hroot
+  have h3 := noCR_printNodes_misc d.epilog hepi
+  simp [print, h1, h2, h3]
+
 /-- The plan's claim: printing a well formed document and parsing
     the print gives the same document back. -/
 theorem parse_print (d : Document) (hwf : WF d) :
     parse (print d) = some d := by
+  have hnorm : normEol (print d) = print d :=
+    normEol_of_noCR _ (noCR_print d hwf)
   obtain ⟨hpro, hroot, ⟨name, attrs, content, hreq⟩, hepi⟩ := hwf
   rw [hreq] at hroot
   cases hroot with
@@ -1633,7 +1753,8 @@ theorem parse_print (d : Document) (hwf : WF d) :
       (printNode d.root ++ printNodes d.epilog)).length + 1 = (print d).length + 1 := by
         simp only [print, List.length_append]; omega
       rw [e]
-      rfl
+      show parseDocument ((normEol (print d)).length + 1) (normEol (print d)) = _
+      rw [hnorm]
     rw [hparse, hPd]
     exact hdoc
 

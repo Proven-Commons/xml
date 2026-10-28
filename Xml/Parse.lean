@@ -13,10 +13,15 @@
     character reference, decimal or hexadecimal, naming a legal
     XML character. Any other reference is rejected: the subset has
     no entities to expand.
+  - Line ends are normalized before anything else, as XML 1.0
+    section 2.11 requires: a carriage return followed by a line
+    feed, and a carriage return not followed by a line feed, each
+    read as one line feed. So no literal carriage return reaches
+    the readers below; one written as the character reference
+    `&#13;` still reads as itself.
   - In an attribute value, a literal tab or line feed reads as a
-    space, and a literal carriage return, with or without a line
-    feed after it, reads as one space. A character reference is
-    never normalized: it reads as the character it names.
+    space. A character reference is never normalized: it reads as
+    the character it names.
   - Character data runs, character references, and CDATA sections
     between two marks are merged into one text run.
   - The XML declaration is rejected: it is a processing
@@ -26,10 +31,6 @@
     namespace, and namespaces are out of this subset. Prefixed
     declarations (`xmlns:p`) are already rejected by the colon
     ban on names.
-
-  Line endings are not normalized in character data, comments,
-  processing instruction data, or CDATA sections: a carriage
-  return reads as itself. `SPEC.md` states this boundary.
 
   The functions that can nest or loop (`parseElement`,
   `parseNodes`, `parseAttrs`, `parseCharData`, `parseMisc`,
@@ -213,11 +214,12 @@ def parsePIData : List Char → Option (List Char × List Char)
 /-- Read an attribute value, at the text after the opening quote
     `q`. Returns the normalized value and the text after the
     closing quote. A literal less sign is rejected; a literal tab
-    or line feed reads as a space; a literal carriage return reads
-    as one space, with a line feed right after it read as part of
-    the same return. References read as the characters they name,
-    with no normalization. The fuel bounds the number of
-    characters and references read, as in `parseTextRun`. -/
+    or line feed reads as a space, which is XML's normalization
+    for CDATA type attributes. Line ends were normalized before
+    parsing, so a literal carriage return never reaches here; one
+    would also read as a space. References read as the characters
+    they name, with no normalization. The fuel bounds the number
+    of characters and references read, as in `parseTextRun`. -/
 def parseAttrValue (q : Char) : Nat → List Char → Option (List Char × List Char)
   | 0, _ => none
   | _ + 1, [] => none
@@ -228,14 +230,8 @@ def parseAttrValue (q : Char) : Nat → List Char → Option (List Char × List 
       match parseRef rest with
       | some (ch, r) => (parseAttrValue q fuel r).map fun (v, r2) => (ch :: v, r2)
       | none => none
-    else if c = '\t' ∨ c = '\n' then
+    else if c = '\t' ∨ c = '\n' ∨ c = '\r' then
       (parseAttrValue q fuel rest).map fun (v, r) => (' ' :: v, r)
-    else if c = '\r' then
-      match rest with
-      | '\n' :: rest2 =>
-        (parseAttrValue q fuel rest2).map fun (v, r) => (' ' :: v, r)
-      | _ =>
-        (parseAttrValue q fuel rest).map fun (v, r) => (' ' :: v, r)
     else if isLegalChar c then
       (parseAttrValue q fuel rest).map fun (v, r) => (c :: v, r)
     else none
@@ -429,9 +425,20 @@ def parseDocument (fuel : Nat) (cs : List Char) : Option Document :=
     | none => none
   | none => none
 
-/-- Parse a whole text, with the fuel the length of the text
-    allows. -/
+/-- The text with its line ends normalized, as XML 1.0 section
+    2.11 requires before parsing: a carriage return followed by a
+    line feed becomes one line feed, and a carriage return
+    followed by anything else, or by nothing, becomes a line
+    feed. -/
+def normEol : List Char → List Char
+  | [] => []
+  | '\r' :: '\n' :: rest => '\n' :: normEol rest
+  | '\r' :: rest => '\n' :: normEol rest
+  | c :: rest => c :: normEol rest
+
+/-- Parse a whole text: normalize its line ends, then read it with
+    the fuel the length of the normalized text allows. -/
 def parse (cs : List Char) : Option Document :=
-  parseDocument (cs.length + 1) cs
+  parseDocument ((normEol cs).length + 1) (normEol cs)
 
 end Xml

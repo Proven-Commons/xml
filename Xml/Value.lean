@@ -232,12 +232,20 @@ mutual
 /-- A node the printer can write and the parser reads back as the
     same node. A text run is not empty and holds only legal
     characters. A comment body has no two dashes in a row, does not
-    end with a dash, and holds only legal characters. A processing
-    instruction has a valid target that is not the reserved word,
-    and data that holds no `?>`, holds only legal characters, and
-    does not start with whitespace (the printer writes one space
-    before the data, and the parser skips whitespace there, so a
-    data value starting with whitespace would lose it). -/
+    end with a dash, holds only legal characters, and holds no
+    carriage return. A processing instruction has a valid target
+    that is not the reserved word, and data that holds no `?>`,
+    holds only legal characters, does not start with whitespace
+    (the printer writes one space before the data, and the parser
+    skips whitespace there, so a data value starting with
+    whitespace would lose it), and holds no carriage return.
+
+    The carriage return rule: the parser normalizes line ends
+    before reading, so a literal carriage return reads as a line
+    feed. Text and attribute values can still hold one, written as
+    the character reference `&#13;`, but a comment or processing
+    instruction has no references, so neither can hold one after
+    parsing, and the printer could not write one back. -/
 inductive WFNode : Node → Prop where
   | text {cs : List Char} (hne : cs ≠ []) (hlegal : ∀ c ∈ cs, LegalChar c) :
       WFNode (.text cs)
@@ -245,10 +253,12 @@ inductive WFNode : Node → Prop where
       {content : List Node} (hname : ValidName name) (hattrs : AttrsOk attrs)
       (hcontent : WFNodes content) : WFNode (.elem name attrs content)
   | comment {cs : List Char} (hdd : NoDashDash cs) (hde : NotDashEnd cs)
-      (hlegal : ∀ c ∈ cs, LegalChar c) : WFNode (.comment cs)
+      (hlegal : ∀ c ∈ cs, LegalChar c) (hcr : '\r' ∉ cs) :
+      WFNode (.comment cs)
   | pi {t d : List Char} (hname : ValidName t) (hres : ¬ IsXmlTarget t)
       (hq : NoQClose d) (hlegal : ∀ c ∈ d, LegalChar c)
-      (hstart : d = [] ∨ ∀ c cs, d = c :: cs → ¬ IsWs c) :
+      (hstart : d = [] ∨ ∀ c cs, d = c :: cs → ¬ IsWs c)
+      (hcr : '\r' ∉ d) :
       WFNode (.pi t d)
 
 /-- A content list whose nodes are all well formed, with no two
