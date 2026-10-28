@@ -116,9 +116,14 @@ root.
 The parser normalizes line ends before it reads, as
 XML 1.0 section 2.11 requires: a carriage return and
 line feed pair, and a lone carriage return, each read as
-one line feed. A carriage return written as `&#13;` in
-text or an attribute value reads as itself, and the
-printer writes it that way.
+one line feed, as the rows for `Spec.crlf_reads_as_lf`
+and `Spec.cr_reads_as_lf` state. A carriage return can
+still stand in the text or an attribute value of a well
+formed tree. The printer writes it as `&#13;`, and
+`Spec.parse_print` says that print reads back to the
+same tree, so the carriage return survives the round
+trip. How `&#13;` or `&#xD;` reads when written anywhere
+else is not proved (see below).
 
 A parser that refuses every text meets every statement
 above except `Spec.parse_print`, which rules it out.
@@ -142,8 +147,12 @@ are about.
   and `Spec.print_parse` that it survives printing, but
   neither ties the tree to the text it came from: a parser
   that read `&e;` as some character, or dropped an
-  attribute, would meet both. The differential tests check
-  the reading against ElementTree instead.
+  attribute, would meet both. Nor does any other
+  statement: a parser that read `&#xD;`, or `&#13;`
+  outside a canonical print, as a legal character other
+  than a carriage return would meet every statement on
+  this page. The differential tests check the reading
+  against ElementTree instead.
 - That the parser rejects every text the subset forbids.
   Each refusal theorem covers the family its row names and
   no other position. For example, a reference to an

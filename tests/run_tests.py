@@ -302,6 +302,11 @@ FIXED = [
     ("<a>x\ry</a>", "<a>x\ny</a>"),
     ("<a>x\r\r\ny\n\rz\r</a>", "<a>x\n\ny\n\nz\n</a>"),
     ("<a>&#13;\r\n&#xD;</a>", "<a>&#13;\n&#13;</a>"),
+    # a reference keeps a CR in any spelling and position, not only
+    # in a canonical print (no theorem covers these; see README)
+    ("<a b='&#xD;x&#13;'/>", '<a b="&#13;x&#13;"/>'),
+    ("<a><b c=\"&#xD;\">&#xD;</b>y&#xd;</a>",
+     '<a><b c="&#13;">&#13;</b>y&#13;</a>'),
     ("<a><![CDATA[x\r\ny\rz]]></a>", "<a>x\ny\nz</a>"),
     ("<!--a\r\nb\rc--><a/>", "<!--a\nb\nc--><a/>"),
     ("<a><?p a\r\nb\rc?></a>", "<a><?p a\nb\nc?></a>"),
