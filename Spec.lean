@@ -113,3 +113,18 @@ theorem Spec.rejects_cdata_in_prolog :
     everywhere. -/
 theorem Spec.rejects_xml_declaration :
     (parse "<?xml version=\"1.0\"?><a/>".toList).isSome = false := sorry
+
+/-- An attribute named `xmlns`, the default namespace declaration,
+    is refused: namespaces are out of this subset, and the colon
+    ban on names does not reach this name. Stated for the root
+    element of a text that starts with any well formed prolog,
+    printed, then the root's start tag with any well formed
+    attributes, printed, before it, and anything after the name
+    that does not make the name longer. -/
+theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs)
+    (hrest : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      ' ' :: xmlnsName ++ rest) = none := sorry

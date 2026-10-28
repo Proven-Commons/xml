@@ -282,6 +282,11 @@ FIXED = [
     ("<a><b/></a >", "<a><b/></a>"),
     ("<!--c--><?p d?><r a=\"1\">t<u/></r><!--e-->",
      "<!--c--><?p d?><r a=\"1\">t<u/></r><!--e-->"),
+    # only the exact name xmlns declares a namespace; these are
+    # ordinary attribute names, and an element may be named xmlns
+    ("<a xmlnsx=\"v\" XMLNS=\"w\" xmln=\"u\"/>",
+     '<a xmlnsx="v" XMLNS="w" xmln="u"/>'),
+    ("<xmlns/>", "<xmlns/>"),
 ]
 
 # Named rejections: (rule, input). ElementTree's verdict is
@@ -313,6 +318,15 @@ REJECTIONS = [
      "<a>&#x110000;</a>"),
     ("colon in a name", "<a:b/>"),
     ("colon in an attribute name", "<a xml:lang=\"en\"/>"),
+    ("default namespace declaration", "<a xmlns=\"urn:x\"/>"),
+    ("empty default namespace declaration", "<a xmlns=\"\"/>"),
+    ("default namespace declaration, single quotes",
+     "<a xmlns='urn:x'><b/></a>"),
+    ("default namespace declaration after another attribute",
+     "<a b=\"1\" xmlns=\"urn:x\"/>"),
+    ("default namespace declaration on a child element",
+     "<a><b xmlns=\"urn:x\"/></a>"),
+    ("prefixed namespace declaration", "<a xmlns:p=\"urn:x\"/>"),
     ("name starting with a digit", "<1a/>"),
     ("attribute name starting with a digit", "<a 1b=\"x\"/>"),
     ("unquoted attribute value", "<a b=x/>"),
@@ -535,7 +549,7 @@ def gen_element(rng, depth):
     attr_spell = []
     for _ in range(rng.randint(0, 3)):
         an = gen_name(rng)
-        if an in used:
+        if an in used or an == "xmlns":
             continue
         used.add(an)
         sp, val, q = gen_attr_value(rng)

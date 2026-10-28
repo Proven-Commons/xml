@@ -40,7 +40,10 @@ parsed leniently.
   underscore.
 - Later characters may also be ASCII digits, a hyphen, or a dot.
 - A colon is never allowed in a name in this subset. In XML a
-  colon signals namespace use, and namespaces are out.
+  colon signals namespace use, and namespaces are out. The colon
+  rule alone does not keep namespaces out, because a default
+  namespace is declared with the plain name `xmlns`; see the
+  attribute rules below.
 - Non-ASCII names are out of the subset. XML 1.0 allows far
   more; that is later work, not this slice.
 
@@ -53,6 +56,14 @@ parsed leniently.
   Single and double quotes are both read; the printer writes
   double quotes.
 - A duplicate attribute name on one element rejects.
+- An attribute named `xmlns` rejects. In Namespaces in XML 1.0
+  it declares a default namespace (`DefaultAttName ::= 'xmlns'`),
+  which namespace-aware parsers apply to the element's name and
+  its children's names, so accepting it as an ordinary attribute
+  would read a different tree from theirs. Only that exact name
+  is refused: `xmlnsx`, `XMLNS`, and an element named `xmlns`
+  declare nothing and are ordinary names. A prefixed declaration
+  (`xmlns:p`) rejects by the colon rule.
 - Whitespace may appear between attributes, around the equals
   sign, and before the closing bracket of a start tag or an end
   tag.
@@ -161,8 +172,8 @@ The round trip is claimed for trees that satisfy a well
 formedness predicate (`WF` in `Xml/Value.lean`):
 
 - every name matches the name rule above;
-- attribute names are unique per element, and attribute values
-  hold only legal XML characters;
+- attribute names are unique per element and none is `xmlns`,
+  and attribute values hold only legal XML characters;
 - text nodes are not empty, hold only legal XML characters,
   and two text nodes never stand next to each other (the
   parser merges them, so an unmerged tree could not come
@@ -203,6 +214,7 @@ each rule on many more inputs.
 | An attribute value with no quotes is refused | `Spec.rejects_unquoted_attribute` |
 | A CDATA section in the prolog is refused | `Spec.rejects_cdata_in_prolog` |
 | The XML declaration form is refused | `Spec.rejects_xml_declaration` |
+| An attribute named `xmlns` on the root element is refused, after any well formed prolog and any well formed attributes before it, printed, whatever follows the name that does not make it longer | `Spec.rejects_xmlns` |
 
 The round trip behind `Spec.parse_print` is
 `Xml.Proofs.parse_print` in `Proofs/RoundTrip.lean`. Its

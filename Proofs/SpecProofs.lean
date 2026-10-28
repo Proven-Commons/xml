@@ -9,6 +9,7 @@
 
 import Xml
 import Proofs.RoundTrip
+import Proofs.Refusals
 
 open Xml
 
@@ -100,3 +101,13 @@ theorem Spec.rejects_cdata_in_prolog :
 theorem Spec.rejects_xml_declaration :
     (parse "<?xml version=\"1.0\"?><a/>".toList).isSome = false := by
   decide +kernel
+
+
+theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
+    (attrs : List (List Char × List Char)) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs)
+    (hrest : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      ' ' :: xmlnsName ++ rest) = none :=
+  Xml.Proofs.rejects_xmlns prolog name attrs rest hpro hname hattrs hrest

@@ -22,6 +22,10 @@
   - The XML declaration is rejected: it is a processing
     instruction whose target is the word `xml`, and that target is
     reserved everywhere in this subset.
+  - An attribute named `xmlns` is rejected: it declares a default
+    namespace, and namespaces are out of this subset. Prefixed
+    declarations (`xmlns:p`) are already rejected by the colon
+    ban on names.
 
   Line endings are not normalized in character data, comments,
   processing instruction data, or CDATA sections: a carriage
@@ -277,7 +281,8 @@ def parseCharData : Nat → List Char → Option (List Char × List Char)
 /-- Read the attributes of a start tag, and how the tag ends.
     Attributes read so far are in `acc`, in order. Returns the
     attributes, the text after the tag, and whether the tag was
-    the empty form. A repeated attribute name is rejected. -/
+    the empty form. A repeated attribute name is rejected, and so
+    is the name `xmlns`, which would declare a default namespace. -/
 def parseAttrs : Nat → List (List Char × List Char) → List Char →
     Option (List (List Char × List Char) × List Char × Bool)
   | 0, _, _ => none
@@ -289,6 +294,7 @@ def parseAttrs : Nat → List (List Char × List Char) → List Char →
       if isNameStart c then
         match parseName (skipWs cs) with
         | some (aname, r1) =>
+          if aname = xmlnsName then none else
           match skipWs r1 with
           | '=' :: r2 =>
             match skipWs r2 with

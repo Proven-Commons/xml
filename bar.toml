@@ -22,7 +22,7 @@ code = [
   "Xml.LegalChar", "Xml.isLegalChar", "Xml.IsNameStart", "Xml.IsNameChar",
   "Xml.isNameStart", "Xml.isNameChar", "Xml.ValidName", "Xml.IsWs",
   "Xml.NoDashDash", "Xml.NotDashEnd", "Xml.NoQClose", "Xml.IsXmlTarget",
-  "Xml.AttrsOk", "Xml.WFNode", "Xml.WFNode.text", "Xml.WFNode.elem",
+  "Xml.xmlnsName", "Xml.AttrsOk", "Xml.WFNode", "Xml.WFNode.text", "Xml.WFNode.elem",
   "Xml.WFNode.comment", "Xml.WFNode.pi", "Xml.WFNodes", "Xml.WFNodes.nil",
   "Xml.WFNodes.cons", "Xml.MiscOk", "Xml.WF",
   # The printer.

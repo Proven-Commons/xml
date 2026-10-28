@@ -7,7 +7,8 @@
   attributes, text, comments, and processing instructions, with
   character references and CDATA sections read as character data.
   There is no document type declaration, no entity beyond the five
-  predefined ones, no namespace, and no XML declaration.
+  predefined ones, no namespace (so no attribute named `xmlns`), and
+  no XML declaration.
 
   A node is one of:
 
@@ -209,14 +210,22 @@ def print (d : Document) : List Char :=
 
 /-! ## Well formed trees -/
 
+/-- The attribute name `xmlns`. In Namespaces in XML 1.0 it
+    declares a default namespace (`DefaultAttName ::= 'xmlns'`).
+    It has no colon, so the colon ban on names does not keep it
+    out; this subset has no namespaces, so no attribute may carry
+    this exact name. Other names, such as `xmlnsx` or `XMLNS`, are
+    ordinary names: they declare nothing. -/
+def xmlnsName : List Char := ['x', 'm', 'l', 'n', 's']
+
 /-- Attribute lists the printer can write and the parser reads
-    back: each name is a valid name, each value holds only legal
-    characters, no name appears twice, and the rest of the list is
-    in order. -/
+    back: each name is a valid name and not `xmlns`, each value
+    holds only legal characters, no name appears twice, and the
+    rest of the list is in order. -/
 def AttrsOk : List (List Char × List Char) → Prop
   | [] => True
   | kv :: rest =>
-    ValidName kv.1 ∧ (∀ c ∈ kv.2, LegalChar c) ∧
+    ValidName kv.1 ∧ kv.1 ≠ xmlnsName ∧ (∀ c ∈ kv.2, LegalChar c) ∧
       (∀ kv2 ∈ rest, kv2.1 ≠ kv.1) ∧ AttrsOk rest
 
 mutual

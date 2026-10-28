@@ -910,9 +910,10 @@ theorem parseAttrs_print : ∀ (attrs : List (List Char × List Char))
     intro acc tail f res hok hdisj hfv hf hfin
     obtain ⟨a, v⟩ := kv
     have hname : ValidName a := hok.1
-    have hval : ∀ c ∈ v, LegalChar c := hok.2.1
-    have hnodup : ∀ kv2 ∈ attrs, kv2.1 ≠ a := hok.2.2.1
-    have hok' : AttrsOk attrs := hok.2.2.2
+    have hnx : a ≠ xmlnsName := hok.2.1
+    have hval : ∀ c ∈ v, LegalChar c := hok.2.2.1
+    have hnodup : ∀ kv2 ∈ attrs, kv2.1 ≠ a := hok.2.2.2.1
+    have hok' : AttrsOk attrs := hok.2.2.2.2
     obtain ⟨c0, ds, ha, hc0, hds⟩ := hname
     subst ha
     cases f with
@@ -1001,7 +1002,7 @@ theorem parseAttrs_print : ∀ (attrs : List (List Char × List Char))
           (printAttrs (((c0 :: ds), v) :: attrs) ++ tail) =
           parseAttrs f' (acc ++ [((c0 :: ds), v)])
             (printAttrs attrs ++ tail) := by
-        simp [parseAttrs, hsk, hpn2, hval', hdup, hc0ne1, hc0ne2,
+        simp [parseAttrs, hsk, hpn2, hval', hdup, hc0ne1, hc0ne2, hnx,
           isNameStart_of hc0, List.cons_append, List.append_assoc,
           skipWs_cons (by decide : isWs '=' = false),
           skipWs_cons (by decide : isWs '"' = false)]

@@ -75,10 +75,12 @@ where they end in `sorry`) and proved in
 | An attribute value with no quotes is refused. | `Spec.rejects_unquoted_attribute` |
 | A CDATA section in the prolog is refused. | `Spec.rejects_cdata_in_prolog` |
 | The XML declaration form is refused. | `Spec.rejects_xml_declaration` |
+| An attribute named `xmlns` (a default namespace declaration) on the root element is refused: after any well formed prolog and any well formed attributes before it, both printed in canonical form, whatever follows the name, as long as it does not make the name longer. | `Spec.rejects_xmlns` |
 
 A document is well formed when its names match the
 subset's name rule, attribute names are unique per
-element, text holds only legal XML characters and no two
+element and none is `xmlns`, text holds only legal XML
+characters and no two
 text runs stand next to each other, comment bodies
 contain no `--` and do not end with `-`, processing
 instruction targets are valid and not the reserved word
