@@ -62,6 +62,7 @@ check fails. Python 3.11+.
 
 import argparse
 import os
+import pyexpat
 import random
 import subprocess
 import sys
@@ -184,6 +185,10 @@ def et_to_model(elem):
 
 
 def et_parse(text):
+    """ElementTree's reading of a text. ET.XMLParser always runs
+    expat with namespace processing on; there is no subset setting.
+    Documents outside the subset are therefore told apart by the
+    named rejection list, not by the oracle."""
     builder = ET.TreeBuilder(insert_comments=True, insert_pis=True)
     return ET.fromstring(text, parser=ET.XMLParser(target=builder))
 
@@ -608,8 +613,12 @@ def build_exe():
     """Always run `lake build`: it does nothing when the build is
     current, and rebuilds the tool after a source change, so a stale
     binary is never tested."""
-    subprocess.run(["lake", "build"], cwd=ROOT, check=True,
-                   timeout=BUILD_TIMEOUT, env=lake_env())
+    out = subprocess.run(["lake", "build"], cwd=ROOT, capture_output=True,
+                         text=True, timeout=BUILD_TIMEOUT, env=lake_env())
+    if out.returncode != 0:
+        sys.stderr.write(out.stdout + out.stderr)
+        raise SystemExit("lake build failed with status %d"
+                         % out.returncode)
 
 
 def lean_version():
@@ -711,11 +720,19 @@ def main():
     lines.append("Written by `tests/run_tests.py`. Rerun it to "
                  "check these numbers.")
     lines.append("")
-    lines.append("- Oracle: Python %s `xml.etree.ElementTree` "
-                 "(expat), subset mode as described in the harness"
-                 % sys.version.split()[0])
+    total = (len(FIXED) + len(gen_inputs) + len(REJECTIONS)
+             + len(MALFORMED) + 2)
+    lines.append("- Oracle: Python %s `xml.etree.ElementTree`, "
+                 "%s (`ET.XMLParser`, which turns namespace "
+                 "processing on, with a `TreeBuilder` that keeps "
+                 "comments and processing instructions)"
+                 % (sys.version.split()[0], pyexpat.EXPAT_VERSION))
     lines.append("- Lean tool: %s" % lean_version())
     lines.append("- Seed: %d" % args.seed)
+    lines.append("- Inputs: %d" % total)
+    lines.append("  - every request sent to the tool: the fixed cases, "
+                 "the generated documents, the named rejections, the "
+                 "malformed requests, and two bare parse requests")
     lines.append("- Fixed cases passed: %d of %d"
                  % (fixed_ok, len(FIXED)))
     lines.append("- Generated in-subset documents: %d" % len(gen_inputs))

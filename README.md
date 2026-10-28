@@ -1,6 +1,6 @@
 # xml: an XML safe-subset parser and printer, with a proved round trip
 
-Status: in-progress
+Status: in progress
 
 A parser and printer in Lean for a safe subset of XML 1.0:
 elements, attributes, text, comments, processing
@@ -37,11 +37,15 @@ echo "parse 60,97,47,62" | .lake/build/bin/xml
 That request is the text `<a/>`, and the answer is
 `ok:60,97,47,62`. See `SPEC.md` for the full protocol.
 
-`python3 tests/run_tests.py` rebuilds the tool if needed,
-runs the fixed cases, and runs the differential tests
-against Python's `xml.etree.ElementTree` in subset mode
-with a fixed seed, writing the counts to
-`tests/TEST-RESULTS.md`.
+`python3 tests/run_tests.py` runs `lake build` (which
+does nothing when the build is current), runs the fixed
+cases, and runs the differential tests against Python's
+`xml.etree.ElementTree` with a fixed seed, writing the
+counts to `tests/TEST-RESULTS.md`. ElementTree has no
+subset setting: it is the stock parser, with namespace
+processing on, so documents outside the subset are told
+apart by the harness's named rejection list and counted
+apart, not by the oracle.
 
 ## What is proved
 
