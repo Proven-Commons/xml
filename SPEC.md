@@ -2,8 +2,8 @@
 
 A parser and printer in Lean for a safe subset of XML 1.0 (Fifth
 Edition), narrowed as stated here. A reviewer who did not write
-this specification approves it, together with any statement file
-a reviewer adds later. No such file exists yet, so nothing here
+this specification approves it, together with the statement file
+`Spec.lean`. No reviewer has approved them yet, so nothing here
 counts toward the verified bar yet.
 
 Text is `List Char`. A Lean `Char` is one Unicode scalar value.
@@ -175,14 +175,51 @@ formedness predicate (`WF` in `Xml/Value.lean`):
 - the root is an element, and the prolog and epilog hold only
   comments and processing instructions.
 
-## The claim
+## Properties and their theorems
 
-Printing a well formed document gives a text that parses to
-the same document: `parse (print d) = some d`. The theorem is
-`Xml.Proofs.parse_print`. It checks against the standard axioms
-only (`propext`, `Classical.choice`, `Quot.sound`), which a
-reader can confirm with `#print axioms
-Xml.Proofs.parse_print`.
+Each property a reader can check in the page (`README.md`)
+names its theorem. The theorems are stated in `Spec.lean`
+and proved in `Proofs/SpecProofs.lean`. The refusal
+theorems are single inputs; the tests in `tests/` cover
+each rule on many more inputs.
+
+| Property | Theorem |
+|----------|---------|
+| Parsing the printed form of a well formed document gives the document back | `Spec.parse_print` |
+| A document carrying a document type declaration is refused | `Spec.rejects_doctype` |
+| A reference to an entity the subset does not define is refused | `Spec.rejects_undefined_entity` |
+| An end tag that does not match the start tag is refused | `Spec.rejects_mismatched_tags` |
+| An element with no end tag is refused | `Spec.rejects_unclosed_element` |
+| A second root element is refused | `Spec.rejects_second_root` |
+| Character data before the root element is refused | `Spec.rejects_text_before_root` |
+| An attribute name standing twice on one element is refused | `Spec.rejects_duplicate_attribute` |
+| A raw less sign inside an attribute value is refused | `Spec.rejects_lt_in_attribute` |
+| The run `]]>` inside text is refused | `Spec.rejects_cdata_close_in_text` |
+| Two dashes in a row inside a comment body are refused | `Spec.rejects_dashdash_in_comment` |
+| A character reference naming a surrogate value is refused | `Spec.rejects_surrogate_ref` |
+| A character reference naming zero is refused | `Spec.rejects_zero_ref` |
+| A colon in a name is refused | `Spec.rejects_colon_in_name` |
+| A name starting with a digit is refused | `Spec.rejects_digit_name` |
+| An attribute value with no quotes is refused | `Spec.rejects_unquoted_attribute` |
+| A CDATA section in the prolog is refused | `Spec.rejects_cdata_in_prolog` |
+| The XML declaration form is refused | `Spec.rejects_xml_declaration` |
+
+The round trip behind `Spec.parse_print` is
+`Xml.Proofs.parse_print` in `Proofs/RoundTrip.lean`. Its
+proofs rest on helper round trips proved in the same file:
+one element and a list of content nodes together
+(`Xml.Proofs.elem_nodes`), a prolog or epilog list
+(`Xml.Proofs.parseMisc_print`), a printed comment body
+(`Xml.Proofs.parseCommentBody_print`), a printed
+processing instruction (`Xml.Proofs.parsePI_print`), and
+escaped text and attribute values read back
+(`Xml.Proofs.parseCharData_escapeText`,
+`Xml.Proofs.parseAttrValue_escapeAttr`). Each proof in
+`Proofs/SpecProofs.lean` uses no axiom but the three
+standard ones (`propext`, `Classical.choice`,
+`Quot.sound`): `comparator.json` names those three as the
+permitted axioms, and `lake comparator` checks the proofs
+against that list.
 
 ## Boundaries and named differences
 
