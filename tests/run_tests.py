@@ -51,12 +51,17 @@ other slices' harnesses.
 
     python3 tests/run_tests.py [--seed N] [--count N]
 
-The tool is built first if needed, driven in batches of request
-lines, and the results are written to tests/TEST-RESULTS.md.
-The exit code is non-zero if any check fails. Python 3.11+.
+The tool is built first with `lake build` (which does nothing
+when the build is current), driven in batches of request lines,
+and the results are written to tests/TEST-RESULTS.md. The run
+fails closed: a tool that exits with a non-zero status, or gives
+fewer or more answers than it was sent requests, is a failure, and
+every failing check is counted. The exit code is non-zero if any
+check fails. Python 3.11+.
 """
 
 import argparse
+import os
 import random
 import subprocess
 import sys
@@ -195,24 +200,36 @@ def request(text):
     return "parse " + codes(text)
 
 
-def run_tool(lines, timeout=TIMEOUT):
-    proc = subprocess.Popen(
-        [str(EXE)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+def run_tool(lines, failures, part, timeout=TIMEOUT):
+    """Send the request lines to the tool and return one answer per
+    line. The run fails closed: a non-zero exit status, or a number
+    of answers that differs from the number of requests, is recorded
+    as a failure of `part`, and missing answers read as `<missing>`,
+    which no check accepts."""
     try:
-        out, _ = proc.communicate(
-            ("\n".join(lines) + "\n").encode(), timeout=timeout)
+        proc = subprocess.run(
+            [str(EXE)], input=("\n".join(lines) + "\n").encode(),
+            capture_output=True, timeout=timeout)
     except subprocess.TimeoutExpired:
-        proc.kill()
-        raise
-    return out.decode().splitlines()
+        failures.append("%s: tool did not answer within %d seconds"
+                        % (part, timeout))
+        return ["<missing>"] * len(lines)
+    answers = proc.stdout.decode(errors="replace").splitlines()
+    if proc.returncode != 0:
+        failures.append("%s: tool exited with status %d"
+                        % (part, proc.returncode))
+    if len(answers) != len(lines):
+        failures.append("%s: tool gave %d answers for %d requests"
+                        % (part, len(answers), len(lines)))
+        answers = (answers + ["<missing>"] * len(lines))[:len(lines)]
+    return answers
 
 
-def run_requests(texts):
+def run_requests(texts, failures, part):
     lines = [request(t) for t in texts]
     answers = []
     for i in range(0, len(lines), CHUNK):
-        answers.extend(run_tool(lines[i:i + CHUNK]))
+        answers.extend(run_tool(lines[i:i + CHUNK], failures, part))
     return answers
 
 
@@ -581,19 +598,23 @@ def gen_document(rng):
 # ----------------------------------------------------------------
 
 
+def lake_env():
+    env = dict(os.environ)
+    env["PATH"] = str(Path.home() / ".elan" / "bin") + ":" + env["PATH"]
+    return env
+
+
 def build_exe():
-    if EXE.exists():
-        return
+    """Always run `lake build`: it does nothing when the build is
+    current, and rebuilds the tool after a source change, so a stale
+    binary is never tested."""
     subprocess.run(["lake", "build"], cwd=ROOT, check=True,
-                   timeout=BUILD_TIMEOUT)
+                   timeout=BUILD_TIMEOUT, env=lake_env())
 
 
 def lean_version():
     out = subprocess.run(["lean", "--version"], capture_output=True,
-                         text=True, timeout=60,
-                         env={**__import__("os").environ,
-                              "PATH": str(Path.home() / ".elan" / "bin")
-                              + ":" + __import__("os").environ["PATH"]})
+                         text=True, timeout=60, cwd=ROOT, env=lake_env())
     return out.stdout.strip() or "unknown"
 
 
@@ -609,12 +630,8 @@ def main():
 
     # Part 1: fixed cases.
     inputs = [t for t, _ in FIXED]
-    answers = run_requests(inputs)
+    answers = run_requests(inputs, failures, "fixed cases")
     fixed_ok = 0
-    if len(answers) != len(inputs):
-        failures.append("fixed: tool gave %d answers for %d requests"
-                        % (len(answers), len(inputs)))
-        answers += ["<missing>"] * (len(inputs) - len(answers))
     for (text, expected), ans in zip(FIXED, answers):
         want = "ok:" + codes(expected)
         if ans == want:
@@ -623,58 +640,43 @@ def main():
             failures.append("fixed case %r: got %r, want %r"
                             % (text, ans, want))
 
-    # Part 2: generated differential.
+    # Part 2: generated differential. Every failing document is
+    # counted; only the printed list is cut short.
     gen_inputs = []
     gen_docs = []
     for _ in range(args.count):
         text, doc = gen_document(rng)
         gen_inputs.append(text)
         gen_docs.append(doc)
-    answers = run_requests(gen_inputs)
+    answers = run_requests(gen_inputs, failures, "generated")
     gen_ok = 0
     et_ok = 0
-    gen_fail = 0
     for text, doc, ans in zip(gen_inputs, gen_docs, answers):
         want = "ok:" + codes(print_doc(doc))
-        good = True
+        why = []
         if ans != want:
-            good = False
-            if gen_fail < 10:
-                failures.append(
-                    "generated: tool answer differs for %r: got %r..."
-                    % (text, ans[:120]))
+            why.append("tool answered %r" % (ans[:120],))
         try:
             et_root = et_parse(text)
             if et_to_model(et_root) != doc[1]:
-                good = False
-                if gen_fail < 10:
-                    failures.append(
-                        "generated: ElementTree tree differs for %r"
-                        % (text,))
+                why.append("ElementTree read a different tree")
             else:
                 et_ok += 1
             et_canon = et_parse(print_doc(doc))
             if et_to_model(et_canon) != doc[1]:
-                good = False
-                if gen_fail < 10:
-                    failures.append(
-                        "generated: ElementTree tree of the print "
-                        "differs for %r" % (text,))
-        except ET.ParseError:
-            good = False
-            if gen_fail < 10:
-                failures.append(
-                    "generated: ElementTree rejected in-subset %r"
-                    % (text,))
-        if good:
-            gen_ok += 1
+                why.append("ElementTree read a different tree "
+                           "from the canonical print")
+        except ET.ParseError as e:
+            why.append("ElementTree rejected it: %s" % e)
+        if why:
+            failures.append("generated %r: %s" % (text, "; ".join(why)))
         else:
-            gen_fail += 1
+            gen_ok += 1
 
     # Part 3: named rejections. Also record ElementTree's verdict
     # on each: accepted means an out of subset disagreement.
     rej_inputs = [t for _, t in REJECTIONS]
-    answers = run_requests(rej_inputs)
+    answers = run_requests(rej_inputs, failures, "named rejections")
     rej_ok = 0
     oos = []
     for (rule, text), ans in zip(REJECTIONS, answers):
@@ -690,7 +692,7 @@ def main():
             pass
 
     # Malformed requests.
-    bad_answers = run_tool(MALFORMED)
+    bad_answers = run_tool(MALFORMED, failures, "malformed requests")
     bad_ok = 0
     for line, ans in zip(MALFORMED, bad_answers):
         if ans == "error":
@@ -698,7 +700,7 @@ def main():
         else:
             failures.append("malformed %r: got %r, want error"
                             % (line, ans))
-    empty_ans = run_tool(["parse", "parse "])
+    empty_ans = run_tool(["parse", "parse "], failures, "bare parse")
     if empty_ans != ["none", "none"]:
         failures.append("bare 'parse' answered %r, want two nones"
                         % (empty_ans,))
@@ -736,6 +738,8 @@ def main():
     lines.append("- Failures: %d" % len(failures))
     for f in failures[:40]:
         lines.append("  - %s" % f)
+    if len(failures) > 40:
+        lines.append("  - (%d more not shown)" % (len(failures) - 40))
     RESULTS.write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     return 1 if failures else 0
