@@ -75,7 +75,8 @@ theorem parse_attrs_none (prolog : List Node) (hpro : MiscOk prolog)
     (name : List Char) (hname : ValidName name)
     (attrs : List (List Char × List Char)) (hattrs : AttrsOk attrs)
     (tail : List Char)
-    (ht : ∀ c, tail.head? = some c → isNameChar c = false)
+    (ht : ∀ c, (printAttrs attrs ++ tail).head? = some c →
+      isNameChar c = false)
     (hcont : ∀ f, 1 ≤ f → parseAttrs f attrs tail = none) :
     parse (printNodes prolog ++ '<' :: (name ++ (printAttrs attrs ++ tail))) =
       none := by
@@ -103,7 +104,7 @@ theorem parse_attrs_none (prolog : List Node) (hpro : MiscOk prolog)
       · intro f' hf'
         simpa using hcont f' hf'
     exact parseElement_attrs_none (name := c0 :: ds) ⟨c0, ds, rfl, hc0, hds⟩
-      (printAttrs_head_not_name attrs tail ht) ha
+      ht ha
 
 /-! ## The name `xmlns` -/
 
@@ -127,7 +128,7 @@ theorem parseAttrs_xmlns (f : Nat) (hf : 1 ≤ f)
     have hpn : parseName ('x' :: 'm' :: 'l' :: 'n' :: 's' :: rest) =
         some (xmlnsName, rest) :=
       parseName_append validName_xmlns hr
-    simp [parseAttrs, hsk, hpn]
+    simp [parseAttrs, hsk, hpn, startsWithWs, isWs]
 
 /-- An attribute named `xmlns` on the root element is refused,
     after any well formed prolog and any well formed attributes
@@ -146,12 +147,73 @@ theorem rejects_xmlns (prolog : List Node) (name : List Char)
     simp [List.append_assoc]
   rw [e]
   apply parse_attrs_none prolog hpro name hname attrs hattrs
-  · intro c hc
+  · apply printAttrs_head_not_name
+    intro c hc
     simp at hc
     rw [← hc]
     exact isNameChar_false_of not_nameChar_space
   · intro f hf
     exact parseAttrs_xmlns f hf attrs rest
       (fun c hc => isNameChar_false_of (hrest c hc))
+
+/-! ## Whitespace between attributes -/
+
+/-- The printed attributes, when there is at least one, start with
+    a space, which is not a name character. -/
+theorem printAttrs_head_space (attrs : List (List Char × List Char))
+    (hne : attrs ≠ []) (tail : List Char) :
+    ∀ c, (printAttrs attrs ++ tail).head? = some c →
+      isNameChar c = false := by
+  intro c hc
+  cases attrs with
+  | nil => exact absurd rfl hne
+  | cons kv as =>
+    simp only [printAttrs, List.cons_append, List.head?_cons] at hc
+    rw [← Option.some.inj hc]
+    exact isNameChar_false_of not_nameChar_space
+
+/-- The attribute reader refuses a name that starts right where
+    the text does, with no whitespace before it. -/
+theorem parseAttrs_no_space (f : Nat) (hf : 1 ≤ f)
+    (acc : List (List Char × List Char)) (c : Char) (rest : List Char)
+    (hc : IsNameStart c) :
+    parseAttrs f acc (c :: rest) = none := by
+  cases f with
+  | zero => omega
+  | succ g =>
+    have hw : isWs c = false := isWs_false_of_not (IsNameStart.ne_ws hc)
+    have h1 : c ≠ '/' := IsNameStart.ne_slash hc
+    have h2 : c ≠ '>' := IsNameStart.ne_of_test hc (by decide)
+    simp only [parseAttrs, skipWs, hw, startsWithWs, Bool.and_false,
+      Bool.false_eq_true, ite_false]
+    split
+    · rename_i r e
+      exact absurd (List.cons.inj e).1 h1
+    · rename_i r e
+      exact absurd (List.cons.inj e).1 h2
+    · rfl
+    · rfl
+
+/-- An attribute name that starts right after the closing quote of
+    the attribute before it, with no whitespace between them, is
+    refused, on the root element after any well formed prolog and
+    at least one well formed attribute, printed, whatever follows
+    the first character of the name. -/
+theorem rejects_attribute_without_space (prolog : List Node)
+    (name : List Char) (attrs : List (List Char × List Char))
+    (c : Char) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      c :: rest) = none := by
+  have e : printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      c :: rest =
+      printNodes prolog ++ '<' :: (name ++ (printAttrs attrs ++
+        c :: rest)) := by
+    simp [List.append_assoc]
+  rw [e]
+  exact parse_attrs_none prolog hpro name hname attrs hattrs (c :: rest)
+    (printAttrs_head_space attrs hne (c :: rest))
+    (fun f hf => parseAttrs_no_space f hf attrs c rest hc)
 
 end Xml.Proofs

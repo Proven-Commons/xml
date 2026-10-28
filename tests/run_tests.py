@@ -18,7 +18,10 @@ Three parts.
    choices that do not change the tree: quote choice, CDATA
    spellings of text, entity and character reference spellings,
    the two empty element spellings, literal whitespace in
-   attribute values (which the subset normalizes to a space).
+   attribute values (which the subset normalizes to a space),
+   the whitespace before each attribute (never empty), around the
+   equals sign and before the end of a tag, and whitespace at the
+   top level around the prolog, the root and the epilog.
    For every document:
 
    - the Lean tool must accept it, and its canonical print must
@@ -287,6 +290,8 @@ FIXED = [
     ("<a xmlnsx=\"v\" XMLNS=\"w\" xmln=\"u\"/>",
      '<a xmlnsx="v" XMLNS="w" xmln="u"/>'),
     ("<xmlns/>", "<xmlns/>"),
+    # any whitespace separates attributes: space, tab, line feed
+    ("<a\tb=\"1\"\nc='2' \t d=\"3\"\n/>", '<a b="1" c="2" d="3"/>'),
 ]
 
 # Named rejections: (rule, input). ElementTree's verdict is
@@ -330,6 +335,15 @@ REJECTIONS = [
     ("name starting with a digit", "<1a/>"),
     ("attribute name starting with a digit", "<a 1b=\"x\"/>"),
     ("unquoted attribute value", "<a b=x/>"),
+    ("no whitespace between attributes", "<a b=\"1\"c=\"2\"/>"),
+    ("no whitespace between attributes, single quotes",
+     "<a b='1'c='2'></a>"),
+    ("no whitespace between attributes (W3C o-p40fail1)",
+     "<doc att=\"val\"att2=\"val2\"></doc>"),
+    ("no whitespace between attributes in an empty element tag",
+     "<doc att=\"val\"att2=\"val2\"/>"),
+    ("no whitespace between attributes on a child element",
+     "<a><b c=\"1\"d=\"2\"/></a>"),
     ("missing equals", "<a b \"x\"/>"),
     ("CDATA section in the prolog", "<![CDATA[x]]><a/>"),
     ("CDATA section in the epilog", "<a/><![CDATA[x]]>"),
@@ -542,6 +556,20 @@ def gen_pi(rng):
             ("pi", target, data))
 
 
+# Whitespace inside tags and at the top level. A separator before an
+# attribute is never empty: XML 1.0 [40] and [44] require one.
+SEPS = [" ", " ", " ", "  ", "\t", "\n", " \n\t"]
+OPT_WS = ["", "", "", " ", "\n", "\t "]
+
+
+def gen_sep(rng):
+    return rng.choice(SEPS)
+
+
+def gen_opt_ws(rng):
+    return rng.choice(OPT_WS)
+
+
 def gen_element(rng, depth):
     name = gen_name(rng)
     used = set()
@@ -555,7 +583,7 @@ def gen_element(rng, depth):
         sp, val, q = gen_attr_value(rng)
         attrs.append((an, val))
         eq = rng.choice(["=", " = ", "= ", " ="])
-        attr_spell.append(" " + an + eq + q + sp + q)
+        attr_spell.append(gen_sep(rng) + an + eq + q + sp + q)
     content = []
     content_spell = []
     if depth < 4:
@@ -581,13 +609,13 @@ def gen_element(rng, depth):
                     content.append(("text", model))
                 content_spell.append(sp)
     model = ("elem", name, attrs, content)
+    stag = "<" + name + "".join(attr_spell) + gen_opt_ws(rng)
+    etag = "</" + name + gen_opt_ws(rng) + ">"
     if not content:
         if rng.random() < 0.5:
-            return "<" + name + "".join(attr_spell) + "/>", model
-        return ("<" + name + "".join(attr_spell) + "></" + name + ">",
-                model)
-    return ("<" + name + "".join(attr_spell) + ">"
-            + "".join(content_spell) + "</" + name + ">", model)
+            return stag + "/>", model
+        return stag + ">" + etag, model
+    return stag + ">" + "".join(content_spell) + etag, model
 
 
 def gen_document(rng):
@@ -610,7 +638,11 @@ def gen_document(rng):
             sp, node = gen_pi(rng)
         epilog.append(node)
         epilog_spell.append(sp)
-    text = "".join(prolog_spell) + root_sp + "".join(epilog_spell)
+    text = (gen_opt_ws(rng)
+            + "".join(sp + gen_opt_ws(rng) for sp in prolog_spell)
+            + root_sp
+            + "".join(gen_opt_ws(rng) + sp for sp in epilog_spell)
+            + gen_opt_ws(rng))
     return text, (prolog, root, epilog)
 
 

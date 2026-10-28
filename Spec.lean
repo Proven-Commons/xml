@@ -128,3 +128,18 @@ theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
     (hrest : ∀ c, rest.head? = some c → ¬ IsNameChar c) :
     parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
       ' ' :: xmlnsName ++ rest) = none := sorry
+
+/-- An attribute must have whitespace before it, as XML 1.0
+    productions [40] and [44] require: a name that starts right
+    after the closing quote of the attribute before it is refused.
+    Stated for the root element of a text that starts with any well
+    formed prolog, printed, then the root's start tag with at least
+    one well formed attribute, printed, then a name start
+    character, then anything. -/
+theorem Spec.rejects_attribute_without_space (prolog : List Node)
+    (name : List Char) (attrs : List (List Char × List Char))
+    (c : Char) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      c :: rest) = none := sorry

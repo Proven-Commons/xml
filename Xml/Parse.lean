@@ -278,11 +278,19 @@ def parseCharData : Nat → List Char → Option (List Char × List Char)
     | some (t, r) => (parseCharData fuel r).map fun (t2, r2) => (t ++ t2, r2)
     | none => none
 
+/-- Whether the text starts with whitespace. -/
+def startsWithWs : List Char → Bool
+  | c :: _ => isWs c
+  | [] => false
+
 /-- Read the attributes of a start tag, and how the tag ends.
     Attributes read so far are in `acc`, in order. Returns the
     attributes, the text after the tag, and whether the tag was
-    the empty form. A repeated attribute name is rejected, and so
-    is the name `xmlns`, which would declare a default namespace. -/
+    the empty form. Each attribute must have whitespace before it,
+    as XML 1.0 requires (`(S Attribute)*` in productions [40] and
+    [44]), so a name right after a closing quote is rejected. A
+    repeated attribute name is rejected, and so is the name
+    `xmlns`, which would declare a default namespace. -/
 def parseAttrs : Nat → List (List Char × List Char) → List Char →
     Option (List (List Char × List Char) × List Char × Bool)
   | 0, _, _ => none
@@ -291,7 +299,7 @@ def parseAttrs : Nat → List (List Char × List Char) → List Char →
     | '/' :: '>' :: rest => some (acc, rest, true)
     | '>' :: rest => some (acc, rest, false)
     | c :: _ =>
-      if isNameStart c then
+      if isNameStart c && startsWithWs cs then
         match parseName (skipWs cs) with
         | some (aname, r1) =>
           if aname = xmlnsName then none else

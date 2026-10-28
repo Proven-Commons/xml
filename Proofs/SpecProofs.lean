@@ -111,3 +111,14 @@ theorem Spec.rejects_xmlns (prolog : List Node) (name : List Char)
     parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
       ' ' :: xmlnsName ++ rest) = none :=
   Xml.Proofs.rejects_xmlns prolog name attrs rest hpro hname hattrs hrest
+
+
+theorem Spec.rejects_attribute_without_space (prolog : List Node)
+    (name : List Char) (attrs : List (List Char × List Char))
+    (c : Char) (rest : List Char)
+    (hpro : MiscOk prolog) (hname : ValidName name)
+    (hattrs : AttrsOk attrs) (hne : attrs ≠ []) (hc : IsNameStart c) :
+    parse (printNodes prolog ++ '<' :: name ++ printAttrs attrs ++
+      c :: rest) = none :=
+  Xml.Proofs.rejects_attribute_without_space prolog name attrs c rest
+    hpro hname hattrs hne hc

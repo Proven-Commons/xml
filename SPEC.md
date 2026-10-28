@@ -64,7 +64,11 @@ parsed leniently.
   is refused: `xmlnsx`, `XMLNS`, and an element named `xmlns`
   declare nothing and are ordinary names. A prefixed declaration
   (`xmlns:p`) rejects by the colon rule.
-- Whitespace may appear between attributes, around the equals
+- Whitespace (space, tab, line feed, carriage return) must stand
+  before each attribute, as XML 1.0 requires (`(S Attribute)*` in
+  productions [40] and [44]): an attribute name that starts right
+  after the closing quote of the one before it rejects, as in
+  `<a b="1"c="2"/>`. Whitespace may also appear around the equals
   sign, and before the closing bracket of a start tag or an end
   tag.
 - In an attribute value: character references and the five
@@ -214,6 +218,7 @@ each rule on many more inputs.
 | An attribute value with no quotes is refused | `Spec.rejects_unquoted_attribute` |
 | A CDATA section in the prolog is refused | `Spec.rejects_cdata_in_prolog` |
 | The XML declaration form is refused | `Spec.rejects_xml_declaration` |
+| An attribute name right after the closing quote of the attribute before it, with no whitespace between them, is refused, on the root element after any well formed prolog and at least one well formed attribute, printed, whatever follows the first character of the name | `Spec.rejects_attribute_without_space` |
 | An attribute named `xmlns` on the root element is refused, after any well formed prolog and any well formed attributes before it, printed, whatever follows the name that does not make it longer | `Spec.rejects_xmlns` |
 
 The round trip behind `Spec.parse_print` is

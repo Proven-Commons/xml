@@ -35,7 +35,7 @@ code = [
   "Xml.charRefChar", "Xml.parseRef", "Xml.takeNameChars", "Xml.parseName",
   "Xml.parseTextRun", "Xml.parseCDATABody", "Xml.parseCommentBody",
   "Xml.parsePIData", "Xml.parseAttrValue", "Xml.parsePI",
-  "Xml.parseCharData", "Xml.parseAttrs", "Xml.parseElement",
+  "Xml.parseCharData", "Xml.startsWithWs", "Xml.parseAttrs", "Xml.parseElement",
   "Xml.parseNodes", "Xml.parseMisc", "Xml.parseDocument", "Xml.parse",
 ]
 

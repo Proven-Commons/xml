@@ -1002,8 +1002,11 @@ theorem parseAttrs_print : ∀ (attrs : List (List Char × List Char))
           (printAttrs (((c0 :: ds), v) :: attrs) ++ tail) =
           parseAttrs f' (acc ++ [((c0 :: ds), v)])
             (printAttrs attrs ++ tail) := by
+        have hsw : startsWithWs
+            (printAttrs (((c0 :: ds), v) :: attrs) ++ tail) = true := by
+          simp [printAttrs, startsWithWs, isWs]
         simp [parseAttrs, hsk, hpn2, hval', hdup, hc0ne1, hc0ne2, hnx,
-          isNameStart_of hc0, List.cons_append, List.append_assoc,
+          isNameStart_of hc0, hsw, List.cons_append, List.append_assoc,
           skipWs_cons (by decide : isWs '=' = false),
           skipWs_cons (by decide : isWs '"' = false)]
       rwa [hstep]
