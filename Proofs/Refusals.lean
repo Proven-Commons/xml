@@ -144,7 +144,8 @@ theorem parseAttrs_xmlns (f : Nat) (hf : 1 ≤ f)
     have hpn : parseName ('x' :: 'm' :: 'l' :: 'n' :: 's' :: rest) =
         some (xmlnsName, rest) :=
       parseName_append validName_xmlns hr
-    simp [parseAttrs, hsk, hpn, startsWithWs, isWs]
+    rw [parseAttrs, hsk, hpn]
+    rfl
 
 /-- An attribute named `xmlns` on the root element is refused,
     after any well formed prolog and any well formed attributes

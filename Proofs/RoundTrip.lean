@@ -758,6 +758,34 @@ theorem isWs_false_of_not {c : Char} (h : ¬ IsWs c) : isWs c = false := by
   have h4 : c ≠ '\r' := fun e => h (Or.inr (Or.inr (Or.inr e)))
   exact isWs_of_ne h1 h2 h3 h4
 
+/-- One step of the processing instruction reader, when the target
+    is followed by a space: the data reader runs after the
+    whitespace. Proved by splitting the reader's match rather than
+    by `simp`, which keeps the proof term small for every kernel. -/
+theorem parsePI_space {cs t X : List Char}
+    (hpn : parseName cs = some (t, ' ' :: X))
+    (hres : ¬ (t.map Char.toLower = ['x', 'm', 'l'])) :
+    parsePI cs =
+      (parsePIData (skipWs (' ' :: X))).map (fun p => (Node.pi t p.1, p.2)) := by
+  rw [parsePI, hpn]
+  split
+  · rename_i target r1 e
+    cases e
+    rw [if_neg hres]
+    split
+    · rename_i r2 e
+      exact absurd (List.cons.inj e).1 (by decide)
+    · rename_i c tl e
+      cases e
+      rw [if_pos (show isWs ' ' = true by decide)]
+      cases parsePIData (skipWs (' ' :: X)) with
+      | none => rfl
+      | some p => rfl
+    · rename_i e
+      cases e
+  · rename_i e
+    cases e
+
 /-- Reading back a printed processing instruction gives the
     instruction back. The input is the text after `<?`, exactly as
     `parsePI` receives it. -/
@@ -804,17 +832,12 @@ theorem parsePI_print (t d : List Char) (rest : List Char)
       simp [skipWs, hw, hc0]
     have hpd := parsePIData_print (c0 :: d0) rest hq hlegal
     rw [if_neg (by simp), List.append_assoc]
-    simp only [parsePI]
-    rw [hpn]
-    simp [hres', hsk, hpd, List.append_assoc, isWs]
-    have hsk2 : skipWs (' ' :: c0 :: (d0 ++ '?' :: '>' :: rest)) =
-        (c0 :: d0) ++ '?' :: '>' :: rest := by
-      have h1 : (' ' :: c0 :: (d0 ++ '?' :: '>' :: rest)) =
-          (' ' :: (c0 :: d0) ++ ['?', '>']) ++ rest := by
-        simp [List.append_assoc]
-      rw [h1]
-      exact hsk
-    rw [hsk2, hpd]
+    have e1 : (' ' :: (c0 :: d0) ++ ['?', '>']) ++ rest =
+        ' ' :: ((c0 :: d0) ++ '?' :: '>' :: rest) := by
+      simp [List.append_assoc]
+    rw [e1] at hpn hsk
+    rw [e1, parsePI_space hpn hres', hsk, hpd]
+    rfl
 
 /-! ## Printed lengths -/
 
@@ -1044,8 +1067,7 @@ theorem parseAttrs_print_open
   intro f' hf'
   cases f' with
   | zero => simp at hf'
-  | succ f'' =>
-    simp [parseAttrs, skipWs, (by decide : isWs '>' = false)]
+  | succ f'' => rfl
 
 /-! ## Elements and content -/
 
