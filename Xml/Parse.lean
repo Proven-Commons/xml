@@ -272,7 +272,7 @@ def parseCharData : Nat → List Char → Option (List Char × List Char)
     match parseCDATABody rest with
     | some (t, r) => (parseCharData fuel r).map fun (t2, r2) => (t ++ t2, r2)
     | none => none
-  | fuel + 1, '<' :: rest => some ([], '<' :: rest)
+  | _ + 1, '<' :: rest => some ([], '<' :: rest)
   | fuel + 1, cs =>
     match parseTextRun fuel cs with
     | some (t, r) => (parseCharData fuel r).map fun (t2, r2) => (t ++ t2, r2)
