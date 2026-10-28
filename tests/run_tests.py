@@ -400,6 +400,11 @@ REJECTIONS = [
     ("duplicate attribute after another", "<a b=\"1\" c=\"2\" b=\"3\"/>"),
     ("raw < after text in an attribute value", "<a b=\"xy<\"/>"),
     ("unquoted value after another attribute", "<a b=\"1\" c=x/>"),
+    # inputs review 1 (finding 7) listed as missing
+    ("hex reference with an upper case X", "<a>&#X41;</a>"),
+    ("reference to a non-character", "<a>&#xFFFE;</a>"),
+    ("document type declaration in content", "<a><!DOCTYPE x></a>"),
+    ("xml declaration after the root", "<a/><?xml version=\"1.0\"?>"),
     ("empty document", ""),
     ("whitespace only document", "  \n "),
     ("comment only document", "<!--c-->"),
@@ -433,7 +438,8 @@ MALFORMED = [
 NAME_START = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 NAME_CHARS = NAME_START + "0123456789.-"
 TEXT_PLAIN = ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-              "0123456789 .,;:!?()[]{}+-*/=_%$#@~^|")
+              "0123456789 .,;:!?()[]{}+-*/=_%$#@~^|"
+              "\u00e9\u4e2d\ufffd\U0001f600")
 COMMENT_WORDS = ["note", "a", "draft-1", "x", "see above", "ok",
                  "todo: fix", "caf\u00e9", "na\u00efve", "123"]
 
