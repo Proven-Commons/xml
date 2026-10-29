@@ -1,0 +1,53 @@
+# Read by bar/check.py in Proven-Commons/mission.
+# See playbook/verified-bar.md there for what each field means.
+
+[project]
+name = "xml"
+# "in-progress" until every bar item passes, then "verified".
+status = "in-progress"
+page = "README.md"
+# GitHub handles of everyone who wrote the specification.
+spec_authors = ["abu-aska", "zero-aska"]
+# The program people run. A change to it voids the approval.
+entry_points = ["Main.lean"]
+
+[spec]
+files = ["SPEC.md", "Spec.lean"]
+# The code under proof: the functions the statements are about.
+code = [
+  # The data types the statements are about, and their constructors.
+  "Xml.Node", "Xml.Node.text", "Xml.Node.elem", "Xml.Node.comment",
+  "Xml.Node.pi", "Xml.Document",
+  # Characters, names, and the conditions a well formed tree meets.
+  "Xml.LegalChar", "Xml.isLegalChar", "Xml.IsNameStart", "Xml.IsNameChar",
+  "Xml.isNameStart", "Xml.isNameChar", "Xml.ValidName", "Xml.IsWs",
+  "Xml.NoDashDash", "Xml.NotDashEnd", "Xml.NoQClose", "Xml.IsXmlTarget",
+  "Xml.xmlnsName", "Xml.AttrsOk", "Xml.WFNode", "Xml.WFNode.text", "Xml.WFNode.elem",
+  "Xml.WFNode.comment", "Xml.WFNode.pi", "Xml.WFNodes", "Xml.WFNodes.nil",
+  "Xml.WFNodes.cons", "Xml.MiscOk", "Xml.WF",
+  # The printer.
+  "Xml.escapeTextChar", "Xml.escapeText", "Xml.escapeAttrChar",
+  "Xml.escapeAttr", "Xml.printAttrs", "Xml.printNode", "Xml.printElem",
+  "Xml.printNodes", "Xml.print",
+  # The parser helpers and the parser.
+  "Xml.isWs", "Xml.skipWs", "Xml.isDigit", "Xml.hexVal", "Xml.isHexDigit",
+  "Xml.takeDigits", "Xml.takeHexDigits", "Xml.digitsValue",
+  "Xml.charRefChar", "Xml.parseRef", "Xml.takeNameChars", "Xml.parseName",
+  "Xml.parseTextRun", "Xml.parseCDATABody", "Xml.parseCommentBody",
+  "Xml.parsePIData", "Xml.parseAttrValue", "Xml.parsePI",
+  "Xml.parseCharData", "Xml.startsWithWs", "Xml.parseAttrs", "Xml.parseElement",
+  "Xml.parseNodes", "Xml.parseMisc", "Xml.parseDocument", "Xml.normEol",
+  "Xml.parse",
+]
+
+# One entry per approval, added in a pull request the reviewer approves.
+# [[spec.approval]]
+# reviewer = "github-handle"
+# date = "2026-11-02"
+# sha256 = "..."
+# record = "https://github.com/Proven-Commons/xml/pull/<n>"
+
+[tests]
+results = "tests/TEST-RESULTS.md"
+command = "python3 tests/run_tests.py"
+files = ["tests/run_tests.py"]
