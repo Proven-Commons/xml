@@ -3,7 +3,7 @@
 A parser and printer in Lean for a safe subset of XML 1.0 (Fifth
 Edition), narrowed as stated here. A reviewer who did not write
 this specification approves it, together with the statement file
-`Spec.lean`. No reviewer has approved them yet, so nothing here
+`Xml/Spec.lean`. No reviewer has approved them yet, so nothing here
 counts toward the verified bar yet.
 
 Text is `List Char`. A Lean `Char` is one Unicode scalar value.
@@ -169,9 +169,9 @@ parsed leniently.
   kind in this subset, so the parser must never expand an
   entity beyond the five predefined ones. This is a rule, and
   only part of it is a theorem: under Properties and their
-  theorems, `Spec.rejects_undefined_entity` covers the root's
+  theorems, `Xml.Spec.rejects_undefined_entity` covers the root's
   first run of character data and
-  `Spec.rejects_undefined_entity_in_attribute` the root's
+  `Xml.Spec.rejects_undefined_entity_in_attribute` the root's
   attribute values. Every other position, a nested element
   among them, rests on the tests.
 
@@ -222,8 +222,8 @@ formedness predicate (`WF` in `Xml/Value.lean`):
 
 Each property a reader can check in the page (`README.md`)
 names its theorem, with the same words there. The theorems
-are stated in `Spec.lean` and proved in
-`Proofs/SpecProofs.lean`, under the same names.
+are stated in `Xml/Spec.lean` and proved in
+`Xml/Proofs/SpecProofs.lean`, under the same names.
 
 The first five hold for every text or every well formed
 document. Each refusal after them is about a family of
@@ -238,46 +238,46 @@ positions.
 
 | Property | Theorem |
 |----------|---------|
-| Parsing the printed form of a well formed document gives the document back | `Spec.parse_print` |
-| Every text the parser accepts gives a well formed document (`Xml.WF`, described below): among other things, no name anywhere in the tree holds a colon or starts with a digit, no attribute name stands twice on one element and none is `xmlns`, every character is a legal XML character, and comment bodies hold no `--` | `Spec.parse_wf` |
-| Printing a document the parser accepted gives a text that parses back to the same document (the plan's main claim, as written) | `Spec.print_parse` |
-| A carriage return followed by a line feed reads exactly as one line feed, anywhere in a text, unless the text before it ends with a carriage return (XML 1.0 section 2.11) | `Spec.crlf_reads_as_lf` |
-| A carriage return not followed by a line feed reads exactly as a line feed, anywhere in a text, unless the text before it ends with a carriage return | `Spec.cr_reads_as_lf` |
-| After a printed prolog, `<!DOCTYPE` and anything after it is refused | `Spec.rejects_doctype` |
-| After a printed prolog, `<![CDATA[` and anything after it is refused | `Spec.rejects_cdata_in_prolog` |
-| A text that starts with `<?` and a target that is the word `xml` in any letter case (the XML declaration form), then anything that does not make the target longer, is refused | `Spec.rejects_xml_declaration` |
-| After a printed prolog, a character that is neither whitespace nor `<`, then anything, is refused (character data before the root) | `Spec.rejects_text_before_root` |
-| Any well formed document, printed, followed by `<` and a name start character, then anything, is refused (a second root) | `Spec.rejects_second_root` |
-| After a printed prolog, `<` and one of the ten digits, then anything, is refused (an element name cannot start with a digit) | `Spec.rejects_digit_name` |
-| After a printed prolog, `<`, any valid name and a colon, then anything, is refused (no colon in the root's name) | `Spec.rejects_colon_in_name` |
-| After a printed prolog, a well formed root element written as its printed start tag, its printed content and an end tag that names a different valid name, then anything, is refused | `Spec.rejects_mismatched_tags` |
-| After a printed prolog, the root's printed start tag at the very end of the text is refused (an element with no end tag) | `Spec.rejects_unclosed_element` |
-| In the root's first run of character data (after a printed prolog and the root's printed start tag, then any text with no `<` and no `&`), a reference `&name;` to any valid name other than `lt`, `gt`, `amp`, `apos` and `quot` is refused, whatever follows: no such entity is expanded there | `Spec.rejects_undefined_entity` |
-| The same in an attribute value of the root: after the root's printed attributes, a space, a valid attribute name, `="`, any text with no `"` and no `&`, then `&name;` for a valid name other than the five, whatever follows | `Spec.rejects_undefined_entity_in_attribute` |
-| In the root's first run of character data, as above, the reference `&#xD800;` (a surrogate) is refused, whatever follows | `Spec.rejects_surrogate_ref` |
-| In the same place, the reference `&#0;` is refused, whatever follows | `Spec.rejects_zero_ref` |
-| In the same place, the run `]]>` is refused, whatever follows | `Spec.rejects_cdata_close_in_text` |
-| For a comment that is the root's first content: `<!--`, a body a well formed comment may hold, `--`, then any character but `>` is refused, whatever follows | `Spec.rejects_dashdash_in_comment` |
-| On the root, after its printed attributes: one more printed attribute whose name is already among them, with any value, is refused, whatever follows | `Spec.rejects_duplicate_attribute` |
-| On the root, after its printed attributes: a space, a valid attribute name, `="`, any text with no `"` and no `&`, then a raw `<`, is refused, whatever follows | `Spec.rejects_lt_in_attribute` |
-| On the root, after its printed attributes: a space, a valid attribute name, `=`, then a character that is no quote and no whitespace, is refused, whatever follows | `Spec.rejects_unquoted_attribute` |
-| On the root, after at least one printed attribute: a name start character right after the closing quote, with no whitespace between, is refused, whatever follows (XML 1.0 productions [40] and [44]) | `Spec.rejects_attribute_without_space` |
-| On the root, after its printed attributes: a space and an attribute named `xmlns` (a default namespace declaration) are refused, whatever follows the name that does not make it longer | `Spec.rejects_xmlns` |
+| Parsing the printed form of a well formed document gives the document back | `Xml.Spec.parse_print` |
+| Every text the parser accepts gives a well formed document (`Xml.WF`, described below): among other things, no name anywhere in the tree holds a colon or starts with a digit, no attribute name stands twice on one element and none is `xmlns`, every character is a legal XML character, and comment bodies hold no `--` | `Xml.Spec.parse_wf` |
+| Printing a document the parser accepted gives a text that parses back to the same document (the plan's main claim, as written) | `Xml.Spec.print_parse` |
+| A carriage return followed by a line feed reads exactly as one line feed, anywhere in a text, unless the text before it ends with a carriage return (XML 1.0 section 2.11) | `Xml.Spec.crlf_reads_as_lf` |
+| A carriage return not followed by a line feed reads exactly as a line feed, anywhere in a text, unless the text before it ends with a carriage return | `Xml.Spec.cr_reads_as_lf` |
+| After a printed prolog, `<!DOCTYPE` and anything after it is refused | `Xml.Spec.rejects_doctype` |
+| After a printed prolog, `<![CDATA[` and anything after it is refused | `Xml.Spec.rejects_cdata_in_prolog` |
+| A text that starts with `<?` and a target that is the word `xml` in any letter case (the XML declaration form), then anything that does not make the target longer, is refused | `Xml.Spec.rejects_xml_declaration` |
+| After a printed prolog, a character that is neither whitespace nor `<`, then anything, is refused (character data before the root) | `Xml.Spec.rejects_text_before_root` |
+| Any well formed document, printed, followed by `<` and a name start character, then anything, is refused (a second root) | `Xml.Spec.rejects_second_root` |
+| After a printed prolog, `<` and one of the ten digits, then anything, is refused (an element name cannot start with a digit) | `Xml.Spec.rejects_digit_name` |
+| After a printed prolog, `<`, any valid name and a colon, then anything, is refused (no colon in the root's name) | `Xml.Spec.rejects_colon_in_name` |
+| After a printed prolog, a well formed root element written as its printed start tag, its printed content and an end tag that names a different valid name, then anything, is refused | `Xml.Spec.rejects_mismatched_tags` |
+| After a printed prolog, the root's printed start tag at the very end of the text is refused (an element with no end tag) | `Xml.Spec.rejects_unclosed_element` |
+| In the root's first run of character data (after a printed prolog and the root's printed start tag, then any text with no `<` and no `&`), a reference `&name;` to any valid name other than `lt`, `gt`, `amp`, `apos` and `quot` is refused, whatever follows: no such entity is expanded there | `Xml.Spec.rejects_undefined_entity` |
+| The same in an attribute value of the root: after the root's printed attributes, a space, a valid attribute name, `="`, any text with no `"` and no `&`, then `&name;` for a valid name other than the five, whatever follows | `Xml.Spec.rejects_undefined_entity_in_attribute` |
+| In the root's first run of character data, as above, the reference `&#xD800;` (a surrogate) is refused, whatever follows | `Xml.Spec.rejects_surrogate_ref` |
+| In the same place, the reference `&#0;` is refused, whatever follows | `Xml.Spec.rejects_zero_ref` |
+| In the same place, the run `]]>` is refused, whatever follows | `Xml.Spec.rejects_cdata_close_in_text` |
+| For a comment that is the root's first content: `<!--`, a body a well formed comment may hold, `--`, then any character but `>` is refused, whatever follows | `Xml.Spec.rejects_dashdash_in_comment` |
+| On the root, after its printed attributes: one more printed attribute whose name is already among them, with any value, is refused, whatever follows | `Xml.Spec.rejects_duplicate_attribute` |
+| On the root, after its printed attributes: a space, a valid attribute name, `="`, any text with no `"` and no `&`, then a raw `<`, is refused, whatever follows | `Xml.Spec.rejects_lt_in_attribute` |
+| On the root, after its printed attributes: a space, a valid attribute name, `=`, then a character that is no quote and no whitespace, is refused, whatever follows | `Xml.Spec.rejects_unquoted_attribute` |
+| On the root, after at least one printed attribute: a name start character right after the closing quote, with no whitespace between, is refused, whatever follows (XML 1.0 productions [40] and [44]) | `Xml.Spec.rejects_attribute_without_space` |
+| On the root, after its printed attributes: a space and an attribute named `xmlns` (a default namespace declaration) are refused, whatever follows the name that does not make it longer | `Xml.Spec.rejects_xmlns` |
 
-`Spec.parse_wf` holds for every text: whatever the parser
+`Xml.Spec.parse_wf` holds for every text: whatever the parser
 accepts meets every rule under Well formed trees, anywhere in
-the tree. With the round trip it gives `Spec.print_parse`, the
+the tree. With the round trip it gives `Xml.Spec.print_parse`, the
 plan's main claim as written. Neither says that the tree is
 the right reading of the text: that rests on the tests. A
 parser that refuses every text meets every statement in the
-table except `Spec.parse_print`, which is the statement such a
-parser fails. The proof of `Spec.parse_wf` is
-`Xml.Proofs.parse_wf` in `Proofs/ParseWF.lean`; the line end
-statements are proved in `Proofs/LineEnds.lean`, and the
-refusals in `Proofs/Refusals.lean`.
+table except `Xml.Spec.parse_print`, which is the statement such a
+parser fails. The proof of `Xml.Spec.parse_wf` is
+`Xml.Proofs.parse_wf` in `Xml/Proofs/ParseWF.lean`; the line end
+statements are proved in `Xml/Proofs/LineEnds.lean`, and the
+refusals in `Xml/Proofs/Refusals.lean`.
 
-The round trip behind `Spec.parse_print` is
-`Xml.Proofs.parse_print` in `Proofs/RoundTrip.lean`. Its
+The round trip behind `Xml.Spec.parse_print` is
+`Xml.Proofs.parse_print` in `Xml/Proofs/RoundTrip.lean`. Its
 proofs rest on helper round trips proved in the same file:
 one element and a list of content nodes together
 (`Xml.Proofs.elem_nodes`), a prolog or epilog list
@@ -287,7 +287,7 @@ processing instruction (`Xml.Proofs.parsePI_print`), and
 escaped text and attribute values read back
 (`Xml.Proofs.parseCharData_escapeText`,
 `Xml.Proofs.parseAttrValue_escapeAttr`). Each proof in
-`Proofs/SpecProofs.lean` uses no axiom but the three
+`Xml/Proofs/SpecProofs.lean` uses no axiom but the three
 standard ones (`propext`, `Classical.choice`,
 `Quot.sound`): `comparator.json` names those three as the
 permitted axioms, and `lake comparator` checks the proofs

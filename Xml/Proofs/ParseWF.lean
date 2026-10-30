@@ -22,7 +22,7 @@
 -/
 
 import Xml
-import Proofs.RoundTrip
+import Xml.Proofs.RoundTrip
 
 namespace Xml.Proofs
 

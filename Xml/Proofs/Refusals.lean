@@ -6,14 +6,14 @@
   in canonical form and the start of a root element, followed by
   the forbidden form and then anything at all. The proofs follow
   the parser through the prolog and the start tag with the round
-  trip lemmas of `Proofs/RoundTrip.lean`, then show the step that
+  trip lemmas of `Xml/Proofs/RoundTrip.lean`, then show the step that
   turns the forbidden form away.
 -/
 
 import Xml
-import Proofs.RoundTrip
-import Proofs.LineEnds
-import Proofs.ParseWF
+import Xml.Proofs.RoundTrip
+import Xml.Proofs.LineEnds
+import Xml.Proofs.ParseWF
 
 namespace Xml.Proofs
 

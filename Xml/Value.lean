@@ -1,6 +1,6 @@
 /-
   The XML tree type for the safe subset, the canonical printer, and
-  the well formed predicate that the round trip proof in `Proofs`
+  the well formed predicate that the round trip proof in `Xml.Proofs`
   uses.
 
   The subset is XML 1.0 narrowed as `SPEC.md` states: elements,

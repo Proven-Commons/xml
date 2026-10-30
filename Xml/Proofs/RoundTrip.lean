@@ -2,8 +2,8 @@
   The round trip proof: for every well formed document, parsing
   its printed form gives the document back.
 
-  The statement proved here is `parse_print`; `Spec.parse_print`
-  in `Spec.lean` states it, and `Proofs/SpecProofs.lean` proves
+  The statement proved here is `parse_print`; `Xml.Spec.parse_print`
+  in `Xml/Spec.lean` states it, and `Xml/Proofs/SpecProofs.lean` proves
   that statement with this theorem.
 
   The proof goes layer by layer: references, text runs, attribute

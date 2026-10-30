@@ -41,7 +41,7 @@ Four parts.
 
 3. Print then parse: every canonical print the tool gave in parts
    1 and 2 is sent back, and the answer must be the same print
-   (`Spec.print_parse`, run on the compiled tool).
+   (`Xml.Spec.print_parse`, run on the compiled tool).
 
 4. Named rejections: inputs for every rejection rule in SPEC.md,
    most of them in more than one position (at the start, after
@@ -382,7 +382,7 @@ REJECTIONS = [
     ("unterminated CDATA section", "<a><![CDATA[x</a>"),
     ("end tag with no start", "</a>"),
     # the same rules in other positions, as the general statements
-    # in Spec.lean state them: after a prolog, after text, after
+    # in Xml/Spec.lean state them: after a prolog, after text, after
     # other attributes, after a whole document
     ("document type declaration after a comment",
      "<!--c--><!DOCTYPE a><a/>"),
@@ -834,7 +834,7 @@ def main():
 
     # Part 3: print then parse. Every canonical print the tool gave
     # in parts 1 and 2 is sent back; the answer must be the same
-    # print (Spec.print_parse, run on the compiled tool).
+    # print (Xml.Spec.print_parse, run on the compiled tool).
     printed = []
     for ans in fixed_answers + gen_answers:
         if ans.startswith("ok:") and len(ans) > 3:

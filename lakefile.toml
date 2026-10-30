@@ -1,16 +1,18 @@
 name = "xml"
 version = "0.1.0"
 license = "Apache-2.0"
-defaultTargets = ["Xml", "Proofs", "xml"]
+defaultTargets = ["Xml", "XmlSpec", "XmlProofs", "xml"]
 
 [[lean_lib]]
 name = "Xml"
 
 [[lean_lib]]
-name = "Proofs"
+name = "XmlSpec"
+roots = ["Xml.Spec"]
 
 [[lean_lib]]
-name = "Spec"
+name = "XmlProofs"
+roots = ["Xml.Proofs"]
 
 [[lean_exe]]
 name = "xml"
